@@ -1,8 +1,10 @@
 # GoWM - Go WebAssembly Manager
 
-![GoWM Logo](./logo.png)
+<div align="center">
+  <img src="./logo.png" alt="GoWM Logo" width="200" />
 
-**GoWM** simplifie l'intégration de modules WebAssembly écrits en Go dans vos projets JavaScript, que ce soit pour Node.js, React ou Vue.js.
+  <p><strong>GoWM</strong> simplifie l'intégration de modules WebAssembly écrits en Go dans vos projets JavaScript.</p>
+</div>
 
 ## ✨ Fonctionnalités
 
@@ -493,29 +495,6 @@ bridge.registerCallback('logMessage', (message) => {
 // Dans votre code Go :
 // js.Global().Call("__gowm_callback_logMessage", "Hello from Go!")
 ```
-
-## 📝 Licence
-
-MIT - voir le fichier LICENSE pour plus de détails.
-
-## 🤝 Contribution
-
-Les contributions sont les bienvenues ! Voir CONTRIBUTING.md pour les guidelines.
-
-## 📚 Ressources Supplémentaires
-
-- **Documentation détaillée** : Voir `GETTING_STARTED.md`
-- **Exemples pratiques** : Dossier `examples/`
-- **Types TypeScript** : Dossier `types/`
-- **Support React** : `hooks/useWasm.js`
-- **Support Vue.js** : `composables/useWasm.js`
-
-## 🆘 Support et Communauté
-
-- **Issues GitHub** : Rapportez les bugs et demandes de fonctionnalités
-- **Discussions** : Partagez vos expériences et posez des questions
-- **Exemples** : Consultez les exemples pour des cas d'usage concrets
-
 ---
 
 Créé avec ❤️ pour simplifier l'utilisation de WebAssembly Go dans JavaScript.
