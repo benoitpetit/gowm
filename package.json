@@ -1,0 +1,71 @@
+{
+    "name": "gowm",
+    "version": "1.0.0",
+    "description": "Go WebAssembly Manager - Simplifiez l'intégration de modules WebAssembly Go dans vos projets JavaScript",
+    "main": "src/index.js",
+    "types": "types/index.d.ts",
+    "files": [
+        "src/",
+        "types/",
+        "hooks/",
+        "composables/",
+        "runtime/",
+        "README.md",
+        "LICENSE",
+        "CHANGELOG.md"
+    ],
+    "scripts": {
+        "test": "node examples/test-wasm.js",
+        "test:basic": "node examples/basic-usage.js",
+        "test:advanced": "node examples/advanced-usage.js",
+        "test:wasm": "node examples/test-wasm.js",
+        "check": "node check-project.js",
+        "build:example": "cd examples/math-wasm && ./build.sh",
+        "build:examples": "npm run build:example",
+        "demo:serve": "npx serve examples -p 3000",
+        "demo:browser": "npm run demo:serve && echo 'Ouvrez http://localhost:3000/browser-demo.html'",
+        "build": "echo 'No build step needed for this package'",
+        "prepublishOnly": "npm run check && npm test"
+    },
+    "keywords": [
+        "wasm",
+        "webassembly",
+        "go",
+        "golang",
+        "javascript",
+        "nodejs",
+        "react",
+        "vue",
+        "vuejs",
+        "bridge",
+        "loader"
+    ],
+    "author": "GoWM Team",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/gowm/gowm.git"
+    },
+    "bugs": {
+        "url": "https://github.com/gowm/gowm/issues"
+    },
+    "homepage": "https://github.com/gowm/gowm#readme",
+    "engines": {
+        "node": ">=14.0.0"
+    },
+    "peerDependencies": {
+        "react": ">=16.8.0",
+        "vue": ">=3.0.0"
+    },
+    "peerDependenciesMeta": {
+        "react": {
+            "optional": true
+        },
+        "vue": {
+            "optional": true
+        }
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0"
+    }
+}
