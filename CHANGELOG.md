@@ -2,6 +2,18 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
+## [1.0.2] - 2025-05-29
+
+### Corrigé
+- **Problème critique de bundling** : Correction de l'importation des modules Node.js `fs` et `path` qui causaient des erreurs avec Webpack 5 et autres bundlers modernes
+- Importation dynamique sécurisée des modules Node.js pour éviter les erreurs de build
+- Amélioration de la détection d'environnement (Node.js vs navigateur)
+- Ajout de méthode `ensureNodeModules()` pour un chargement sûr des dépendances Node.js
+
+### Ajouté
+- Version sécurisée du loader (`loader-safe.js`) avec gestion d'erreurs améliorée
+- Meilleure compatibilité avec les bundlers modernes (Webpack 5, Vite, etc.)
+
 ## [1.0.1] - 2025-05-29
 
 ### Corrigé

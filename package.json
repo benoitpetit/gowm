@@ -1,6 +1,6 @@
 {
     "name": "gowm",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Go WebAssembly Manager - Simplifiez l'intégration de modules WebAssembly Go dans vos projets JavaScript",
     "main": "src/index.js",
     "browser": "src/browser.js",

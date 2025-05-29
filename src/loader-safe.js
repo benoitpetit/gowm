@@ -1,25 +1,41 @@
+// Version sécurisée du loader qui évite les problèmes de bundling
 class WasmLoader {
     constructor() {
         this.modules = new Map();
         this.isNode = typeof window === 'undefined';
-        
-        // Les modules Node.js seront importés de façon dynamique quand nécessaire
+        this.nodeModulesLoaded = false;
         this.fs = null;
         this.path = null;
     }
 
     async ensureNodeModules() {
-        if (this.isNode && !this.fs) {
-            this.fs = require('fs');
-            this.path = require('path');
+        if (this.isNode && !this.nodeModulesLoaded) {
+            try {
+                // Import dynamique pour éviter les problèmes avec les bundlers
+                this.fs = await this.dynamicRequire('fs');
+                this.path = await this.dynamicRequire('path');
+                this.nodeModulesLoaded = true;
+            } catch (error) {
+                console.warn('Failed to load Node.js modules:', error.message);
+            }
         }
     }
 
+    async dynamicRequire(module) {
+        if (typeof require !== 'undefined') {
+            return require(module);
+        }
+        throw new Error(`Module ${module} not available`);
+    }
+
     async loadModule(wasmPath, options = {}) {
-        // S'assurer que les modules Node.js sont chargés si nécessaire
         await this.ensureNodeModules();
         
-        const moduleId = options.name || (this.isNode ? this.path.basename(wasmPath, '.wasm') : wasmPath.split('/').pop().replace('.wasm', ''));
+        const moduleId = options.name || (
+            this.isNode && this.path 
+                ? this.path.basename(wasmPath, '.wasm') 
+                : wasmPath.split('/').pop().replace('.wasm', '')
+        );
 
         if (this.modules.has(moduleId)) {
             return this.modules.get(moduleId);
@@ -34,7 +50,7 @@ class WasmLoader {
             const go = new globalThis.Go();
             let wasmBytes;
 
-            if (this.isNode) {
+            if (this.isNode && this.fs) {
                 if (!this.fs.existsSync(wasmPath)) {
                     throw new Error(`WASM file not found: ${wasmPath}`);
                 }
@@ -102,13 +118,13 @@ class WasmLoader {
         
         const runtimePath = customPath || this.getDefaultRuntimePath();
 
-        if (this.isNode) {
+        if (this.isNode && this.fs) {
             // Vérifier que le fichier existe
             if (!this.fs.existsSync(runtimePath)) {
                 console.warn(`Go runtime not found at ${runtimePath}, using fallback`);
                 // Utiliser le fallback du dossier runtime
-                const fallbackPath = this.path.join(__dirname, '../runtime/wasm_exec.js');
-                if (this.fs.existsSync(fallbackPath)) {
+                const fallbackPath = this.path ? this.path.join(__dirname, '../runtime/wasm_exec.js') : null;
+                if (fallbackPath && this.fs.existsSync(fallbackPath)) {
                     require(fallbackPath);
                 } else {
                     throw new Error(`Go runtime not found. Please ensure wasm_exec.js is available`);
@@ -130,6 +146,11 @@ class WasmLoader {
 
     loadScript(src) {
         return new Promise((resolve, reject) => {
+            if (typeof document === 'undefined') {
+                reject(new Error('Cannot load script in non-browser environment'));
+                return;
+            }
+            
             const script = document.createElement('script');
             script.src = src;
             script.onload = resolve;

@@ -18,7 +18,7 @@ export default class WasmLoader {
             }
 
             const go = new globalThis.Go();
-            
+
             const response = await fetch(wasmPath);
             if (!response.ok) {
                 throw new Error(`Failed to fetch WASM file: ${response.status} ${response.statusText}`);
