@@ -1,17 +1,11 @@
-class WasmLoader {
+export default class WasmLoader {
     constructor() {
         this.modules = new Map();
-        this.isNode = typeof window === 'undefined';
-        
-        // Importer les modules Node.js seulement en environnement Node.js
-        if (this.isNode) {
-            this.fs = require('fs');
-            this.path = require('path');
-        }
+        this.isNode = false; // Toujours faux en environnement navigateur
     }
 
     async loadModule(wasmPath, options = {}) {
-        const moduleId = options.name || (this.isNode ? this.path.basename(wasmPath, '.wasm') : wasmPath.split('/').pop().replace('.wasm', ''));
+        const moduleId = options.name || wasmPath.split('/').pop().replace('.wasm', '');
 
         if (this.modules.has(moduleId)) {
             return this.modules.get(moduleId);
@@ -24,20 +18,12 @@ class WasmLoader {
             }
 
             const go = new globalThis.Go();
-            let wasmBytes;
-
-            if (this.isNode) {
-                if (!this.fs.existsSync(wasmPath)) {
-                    throw new Error(`WASM file not found: ${wasmPath}`);
-                }
-                wasmBytes = this.fs.readFileSync(wasmPath);
-            } else {
-                const response = await fetch(wasmPath);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch WASM file: ${response.status} ${response.statusText}`);
-                }
-                wasmBytes = await response.arrayBuffer();
+            
+            const response = await fetch(wasmPath);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch WASM file: ${response.status} ${response.statusText}`);
             }
+            const wasmBytes = await response.arrayBuffer();
 
             const result = await WebAssembly.instantiate(wasmBytes, go.importObject);
 
@@ -90,32 +76,8 @@ class WasmLoader {
     }
 
     async loadGoRuntime(customPath) {
-        const runtimePath = customPath || this.getDefaultRuntimePath();
-
-        if (this.isNode) {
-            // Vérifier que le fichier existe
-            if (!this.fs.existsSync(runtimePath)) {
-                console.warn(`Go runtime not found at ${runtimePath}, using fallback`);
-                // Utiliser le fallback du dossier runtime
-                const fallbackPath = this.path.join(__dirname, '../runtime/wasm_exec.js');
-                if (this.fs.existsSync(fallbackPath)) {
-                    require(fallbackPath);
-                } else {
-                    throw new Error(`Go runtime not found. Please ensure wasm_exec.js is available`);
-                }
-            } else {
-                require(runtimePath);
-            }
-        } else {
-            await this.loadScript(runtimePath);
-        }
-    }
-
-    getDefaultRuntimePath() {
-        if (this.isNode) {
-            return this.path.join(__dirname, '../runtime/wasm_exec.js');
-        }
-        return '/wasm_exec.js';
+        const runtimePath = customPath || '/wasm_exec.js';
+        await this.loadScript(runtimePath);
     }
 
     loadScript(src) {
@@ -149,5 +111,3 @@ class WasmLoader {
         return Array.from(this.modules.keys());
     }
 }
-
-module.exports = WasmLoader;

@@ -1,9 +1,21 @@
 {
     "name": "gowm",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Go WebAssembly Manager - Simplifiez l'intégration de modules WebAssembly Go dans vos projets JavaScript",
     "main": "src/index.js",
+    "browser": "src/browser.js",
+    "module": "src/browser.js",
     "types": "types/index.d.ts",
+    "exports": {
+        ".": {
+            "node": "./src/index.js",
+            "browser": "./src/browser.js",
+            "import": "./src/browser.js",
+            "require": "./src/index.js"
+        },
+        "./hooks": "./hooks/useWasm.js",
+        "./composables": "./composables/useWasm.js"
+    },
     "files": [
         "src/",
         "types/",
@@ -40,30 +52,11 @@
         "bridge",
         "loader"
     ],
-    "author": "GoWM Team",
+    "author": "devbyben",
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/gowm/gowm.git"
-    },
-    "bugs": {
-        "url": "https://github.com/gowm/gowm/issues"
-    },
-    "homepage": "https://github.com/gowm/gowm#readme",
-    "engines": {
-        "node": ">=14.0.0"
-    },
-    "peerDependencies": {
-        "react": ">=16.8.0",
-        "vue": ">=3.0.0"
-    },
-    "peerDependenciesMeta": {
-        "react": {
-            "optional": true
-        },
-        "vue": {
-            "optional": true
-        }
+        "url": "git+https://github.com/benoitpetit/gowm.git"
     },
     "devDependencies": {
         "@types/node": "^20.0.0"
