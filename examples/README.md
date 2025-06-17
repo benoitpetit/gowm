@@ -1,275 +1,199 @@
-# 📚 Exemples GoWM
+# 📚 GoWM Examples
 
-Ce dossier contient des exemples complets d'utilisation de GoWM pour intégrer des modules WebAssembly Go dans différents environnements JavaScript.
+This folder contains comprehensive examples of using GoWM to integrate Go WebAssembly modules in different JavaScript environments.
 
-## 🗂️ Structure des exemples
+## 🗂️ Organized Structure
 
 ```
 examples/
-├── README.md              # Ce fichier
-├── math-wasm/             # Module WASM Go simple
-│   ├── main.go           # Code source Go
-│   ├── go.mod            # Module Go
-│   ├── build.sh          # Script de compilation
-│   └── README.md         # Documentation du module
-├── basic-usage.js         # Exemple Node.js basique
-├── advanced-usage.js      # Exemple Node.js avancé
-├── react-calculator.jsx   # Composant React
-├── vue-calculator.vue     # Composant Vue.js
-├── browser-demo.html      # Démonstration navigateur
-└── test-wasm.js          # Tests automatisés
+├── README.md                    # This documentation
+│
+├── 🎯 node/                    # Node.js Examples
+│   ├── basic-usage.js          # Simple Node.js introduction
+│   ├── advanced-usage.js       # Advanced Node.js features
+│   └── github-usage.js         # Loading from GitHub
+│
+├── 🌐 browser/                 # Browser Examples
+│   ├── browser-demo.html       # Standalone browser demo
+│   └── assets/                 # Browser demo assets
+│       └── styles.css
+│
+├── ⚛️ frameworks/              # Frontend Framework Examples
+│   ├── react/
+│   │   └── react-calculator.jsx
+│   └── vue/
+│       ├── vue-calculator.vue
+│       └── vue-github-calculator.vue
+│
+├── 🧪 tests/                   # Automated Tests
+│   ├── test-wasm.js           # Basic WASM tests
+│   └── test-image-wasm.js     # Image processing tests
+│
+├── 🛠️ tools/                   # Utility Scripts
+│   ├── convert-to-webp.js     # Image conversion utility
+│   └── assets/                # Test assets
+│       └── photo.png
+│
+└── 📦 wasm-modules/            # WASM Source Code
+    ├── math-wasm/             # Mathematical functions
+    │   ├── main.go
+    │   ├── build.sh
+    │   ├── main.wasm
+    │   └── README.md
+    └── image-wasm/            # Image processing
+        ├── main.go
+        ├── build.sh
+        ├── main.wasm
+        └── README.md
 ```
 
-## 🚀 Démarrage rapide
+## 🚀 Quick Start
 
-### 1. Compiler le module WASM
+### 1. Build WASM Modules
 
 ```bash
-cd examples/math-wasm
+# Build math module
+cd examples/wasm-modules/math-wasm
+./build.sh
+
+# Build image processing module
+cd ../image-wasm
 ./build.sh
 ```
 
-### 2. Tester avec Node.js
+### 2. Run Node.js Examples
 
 ```bash
-# Depuis la racine du projet
-npm run test:basic
-# ou
-node examples/basic-usage.js
+# Basic usage
+node examples/node/basic-usage.js
+
+# Advanced features
+node examples/node/advanced-usage.js
+
+# GitHub loading
+node examples/node/github-usage.js
 ```
 
-### 3. Tester dans le navigateur
+### 3. Run Browser Demo
 
 ```bash
-# Servir les fichiers avec un serveur HTTP
-npx serve examples/
-# Ouvrir http://localhost:3000/browser-demo.html
+# Serve with any HTTP server
+npx serve examples/browser/
+# Open http://localhost:3000/browser-demo.html
 ```
 
-## 📖 Exemples détaillés
+### 4. Run Tests
 
-### 🔧 Module WASM Go (`math-wasm/`)
-
-Un module WebAssembly Go simple qui fournit des fonctions mathématiques de base :
-
-- **Fonctions disponibles** : `add`, `subtract`, `multiply`, `divide`, `power`, `factorial`
-- **Gestion d'erreurs** : Division par zéro, factorielle négative
-- **Signal de prêt** : Compatible avec le système de détection GoWM
-
-**Utilisation :**
-```javascript
-const { load } = require('gowm');
-const math = await load('./examples/math-wasm/main.wasm');
-console.log('5 + 3 =', math.call('add', 5, 3));
-```
-
-### 📱 Exemple Node.js basique (`basic-usage.js`)
-
-Démontre l'utilisation fondamentale de GoWM :
-
-- Chargement d'un module WASM
-- Appels de fonctions synchrones et asynchrones
-- Gestion d'erreurs
-- Statistiques du module
-
-**Exécution :**
 ```bash
-node examples/basic-usage.js
+# Run all tests
+npm test
+
+# Run specific tests
+node examples/tests/test-wasm.js
+node examples/tests/test-image-wasm.js
 ```
 
-### 🚀 Exemple Node.js avancé (`advanced-usage.js`)
+## 📖 Example Categories
 
-Présente des fonctionnalités avancées :
+### 🎯 Node.js Examples (`node/`)
 
-- Gestion de plusieurs modules
-- Appels parallèles
-- Gestion de la mémoire
-- Benchmark de performance
-- Nettoyage des ressources
+Learn GoWM fundamentals in Node.js environment:
 
-**Exécution :**
-```bash
-node examples/advanced-usage.js
-```
+- **`basic-usage.js`** - Essential GoWM concepts and simple function calls
+- **`advanced-usage.js`** - Multiple modules, performance monitoring, memory management
+- **`github-usage.js`** - Loading WASM modules directly from GitHub repositories
 
-### ⚛️ Composant React (`react-calculator.jsx`)
+### 🌐 Browser Examples (`browser/`)
 
-Calculatrice React utilisant le hook `useWasm` :
+Web browser integration and usage:
 
-- **Hook** : `useWasm` pour charger automatiquement le module
-- **État** : Gestion du loading, erreurs, et résultats
-- **UI** : Interface moderne avec historique des calculs
-- **Responsive** : Adapté mobile et desktop
+- **`browser-demo.html`** - Complete standalone browser demonstration
+- Modern UI with responsive design
+- No external dependencies required
 
-**Fonctionnalités :**
-- Calculs mathématiques en temps réel
-- Historique des opérations (10 dernières)
-- Gestion d'erreurs intégrée
-- Informations sur le module WASM
+### ⚛️ Framework Examples (`frameworks/`)
 
-### 🌟 Composant Vue.js (`vue-calculator.vue`)
+Integration with popular frontend frameworks:
 
-Calculatrice Vue.js 3 utilisant les composables :
+**React** (`frameworks/react/`):
+- Interactive calculator using `useWasm` hooks
+- Real-time calculations with WASM backend
+- Error handling and loading states
 
-- **Composable** : `useWasm` pour Vue 3
-- **Réactivité** : État réactif avec `ref` et `computed`
-- **Fonctionnalités** : Calculs rapides, export d'historique
-- **Persistance** : Sauvegarde localStorage
+**Vue.js** (`frameworks/vue/`):
+- Calculator with Vue 3 Composition API
+- GitHub repository loading example
+- Reactive state management with WASM
 
-**Fonctionnalités avancées :**
-- Calculs rapides prédéfinis
-- Export JSON de l'historique
-- Statistiques de performance
-- Interface responsive complète
+### 🧪 Tests (`tests/`)
 
-### 🌐 Démonstration navigateur (`browser-demo.html`)
+Automated testing and validation:
 
-Page HTML autonome pour démonstration :
+- **`test-wasm.js`** - Core functionality validation
+- **`test-image-wasm.js`** - Image processing pipeline tests
+- Performance benchmarks
+- Error handling verification
 
-- **Loader simple** : Implémentation basique du chargement WASM
-- **Interface** : UI moderne sans dépendances
-- **Responsive** : Mobile-first design
-- **Fonctionnalités** : Tous les calculs + actions rapides
+### 🛠️ Tools (`tools/`)
 
-**Avantages :**
-- Aucune dépendance externe
-- Fonctionne hors ligne
-- Démonstration complète des capacités
-- Code source visible et éducatif
+Utility scripts and practical applications:
 
-### 🧪 Tests automatisés (`test-wasm.js`)
+- **`convert-to-webp.js`** - CLI tool for image format conversion
+- Demonstrates real-world WASM usage
+- Production-ready script example
 
-Suite de tests complète pour validation :
+### 📦 WASM Modules (`wasm-modules/`)
 
-- **Tests unitaires** : Chaque fonction mathématique
-- **Tests d'erreurs** : Validation des cas d'erreur
-- **Tests de performance** : Benchmark simple
-- **Tests asynchrones** : Validation des appels async
+Source code for Go WebAssembly modules:
 
-**Utilisation :**
-```bash
-node examples/test-wasm.js
-```
+- **`math-wasm/`** - Mathematical operations (add, multiply, factorial, etc.)
+- **`image-wasm/`** - Image processing (resize, compress, format conversion)
+- Complete Go source code with build scripts
+- Ready-to-use compiled WASM files
 
-## 🛠️ Prérequis techniques
+## 🔧 Technical Requirements
 
-### Pour tous les exemples
+### Core Requirements
 - **Node.js** >= 14.0.0
-- **Go** >= 1.21 (pour compiler le module WASM)
+- **Go** >= 1.21 (for building WASM modules)
+- **Modern browser** with WebAssembly support
 
-### Pour React
-- **React** >= 16.8.0 (hooks)
-- **Bundler** compatible WebAssembly (Webpack, Vite, etc.)
+### Framework-Specific
+- **React** >= 16.8.0 (for hooks)
+- **Vue.js** >= 3.0.0 (for Composition API)
+- **Bundler** with WebAssembly support (Webpack, Vite, etc.)
 
-### Pour Vue.js
-- **Vue.js** >= 3.0.0 (Composition API)
-- **Bundler** compatible WebAssembly
+## 📚 Learning Path
 
-### Pour le navigateur
-- **Navigateur moderne** avec support WebAssembly
-- **Serveur HTTP** pour servir les fichiers (CORS)
+1. **Start with Node.js basics** (`node/basic-usage.js`)
+2. **Explore advanced features** (`node/advanced-usage.js`)
+3. **Try browser integration** (`browser/browser-demo.html`)
+4. **Learn framework integration** (`frameworks/react/` or `frameworks/vue/`)
+5. **Use GitHub loading** (`node/github-usage.js`)
+6. **Build your own tools** (inspired by `tools/convert-to-webp.js`)
 
-## 🔧 Configuration et déploiement
+## 🤝 Contributing
 
-### Serveur de développement
+When adding new examples:
 
-Pour React/Vue, configurez votre bundler pour servir les fichiers `.wasm` :
+1. Place in the appropriate category folder
+2. Include comprehensive comments
+3. Add error handling
+4. Update this README
+5. Test across different environments
 
-**Webpack :**
-```javascript
-module.exports = {
-  module: {
-    rules: [
-      {
-        test: /\.wasm$/,
-        type: 'webassembly/async'
-      }
-    ]
-  }
-};
-```
+## 🆘 Troubleshooting
 
-**Vite :**
-```javascript
-// vite.config.js
-export default {
-  server: {
-    fs: {
-      allow: ['..']
-    }
-  }
-};
-```
+**Common Issues:**
 
-### Production
+1. **WASM module not found**: Build modules first with `./build.sh`
+2. **Go not installed**: Install Go from https://golang.org/
+3. **Browser CORS errors**: Use a local HTTP server, not `file://`
+4. **Module loading fails**: Check file paths and permissions
 
-1. **Compilez le module WASM** avant le build
-2. **Incluez `wasm_exec.js`** dans votre bundle
-3. **Configurez MIME types** pour `.wasm` sur votre serveur
-4. **Activez CORS** si nécessaire
+**Getting Help:**
 
-### Headers serveur recommandés
-
-```
-Content-Type: application/wasm
-Cross-Origin-Embedder-Policy: require-corp
-Cross-Origin-Opener-Policy: same-origin
-```
-
-## 🐛 Dépannage
-
-### Module WASM non trouvé
-```bash
-# Vérifiez que Go est installé
-go version
-
-# Compilez le module
-cd examples/math-wasm && ./build.sh
-
-# Vérifiez que le fichier existe
-ls -la examples/math-wasm/main.wasm
-```
-
-### Erreur de chargement dans le navigateur
-- Servez les fichiers via HTTP (pas `file://`)
-- Vérifiez les CORS
-- Assurez-vous que `wasm_exec.js` est accessible
-
-### Performance lente
-- Activez les optimisations Go : `-ldflags="-s -w"`
-- Utilisez `callAsync` pour les opérations longues
-- Considérez le pre-loading des modules
-
-### Erreurs TypeScript
-```bash
-# Installez les types
-npm install @types/node
-
-# Vérifiez la configuration tsconfig.json
-```
-
-## 📊 Métriques et monitoring
-
-Les exemples incluent des fonctionnalités de monitoring :
-
-- **Temps d'exécution** des fonctions
-- **Nombre d'appels** effectués
-- **Statistiques mémoire** (via `getStats()`)
-- **Détection d'erreurs** automatique
-
-## 🤝 Contribution
-
-Pour ajouter de nouveaux exemples :
-
-1. Créez un nouveau fichier dans `examples/`
-2. Documentez l'exemple dans ce README
-3. Ajoutez des tests dans `test-wasm.js`
-4. Mettez à jour le `package.json` avec un script de test
-
-## 📄 Licence
-
-Ces exemples sont sous licence MIT, comme le projet GoWM principal.
-
----
-
-**💡 Conseil :** Commencez par l'exemple basique, puis explorez les exemples plus avancés selon vos besoins !
+- Check example comments for detailed explanations
+- Review test files for usage patterns
+- Consult the main project README
+- Open an issue for bugs or questions

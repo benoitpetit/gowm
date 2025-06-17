@@ -1,4 +1,4 @@
-// Types pour TypeScript
+// TypeScript definitions for GoWM
 
 export interface WasmModule {
     instance: WebAssembly.Instance;
@@ -13,6 +13,13 @@ export interface LoadOptions {
     preInit?: boolean;
 }
 
+export interface GitHubLoadOptions extends LoadOptions {
+    branch?: string;
+    tag?: string;
+    path?: string;
+    filename?: string;
+}
+
 export interface BufferInfo {
     ptr: number;
     buffer: Uint8Array | Float64Array;
@@ -25,6 +32,7 @@ export interface ModuleStats {
     functions: string[];
     callbacks: string[];
     memoryUsage: number;
+    allocatedBuffers: number;
     name: string;
 }
 
@@ -57,32 +65,51 @@ export declare class GoWM {
 
     load(wasmPath: string, options?: LoadOptions): Promise<WasmBridge>;
     get(name?: string): WasmBridge | null;
+    loadFromGitHub(githubRepo: string, options?: GitHubLoadOptions): Promise<WasmBridge>;
+    /** @deprecated Use loadFromGitHub instead */
     loadFromNPM(packageName: string, options?: LoadOptions): Promise<WasmBridge>;
     unload(name?: string): boolean;
     listModules(): string[];
     getStats(): Record<string, ModuleStats>;
     unloadAll(): void;
+    isLoaded(name?: string): boolean;
+    getTotalMemoryUsage(): number;
 }
 
-// API simplifiée
+// Simplified API
 export declare function load(wasmPath: string, options?: LoadOptions): Promise<WasmBridge>;
 export declare function get(name?: string): WasmBridge | null;
+export declare function loadFromGitHub(githubRepo: string, options?: GitHubLoadOptions): Promise<WasmBridge>;
+/** @deprecated Use loadFromGitHub instead */
 export declare function loadFromNPM(packageName: string, options?: LoadOptions): Promise<WasmBridge>;
 export declare function unload(name?: string): boolean;
 export declare function listModules(): string[];
 export declare function getStats(): Record<string, ModuleStats>;
 export declare function unloadAll(): void;
+export declare function isLoaded(name?: string): boolean;
+export declare function getTotalMemoryUsage(): number;
 
-// Hook React
+// React Hook
 export interface UseWasmResult {
     wasm: WasmBridge | null;
     loading: boolean;
     error: Error | null;
 }
 
-export declare function useWasm(wasmPath: string, options?: LoadOptions): UseWasmResult;
+export interface UseMultipleWasmResult {
+    modules: Record<string, WasmBridge>;
+    loading: boolean;
+    errors: Record<string, Error>;
+    reload: () => void;
+}
 
-// Composables Vue
+export declare function useWasm(wasmPath: string, options?: LoadOptions): UseWasmResult;
+export declare function useWasmFromGitHub(githubRepo: string, options?: GitHubLoadOptions): UseWasmResult;
+export declare function useMultipleWasmFromGitHub(githubRepos: GitHubRepoConfig[], options?: GitHubLoadOptions): UseMultipleWasmResult;
+/** @deprecated Use useWasmFromGitHub instead */
+export declare function useWasmFromNPM(packageName: string, options?: LoadOptions): UseWasmResult;
+
+// Vue Composables
 import { Ref } from 'vue';
 
 export interface VueWasmResult {
@@ -93,10 +120,20 @@ export interface VueWasmResult {
 }
 
 export interface VueMultiWasmConfig {
-    name?: string;
+    name: string;
     path?: string;
-    package?: string;
+    github?: string;
     options?: LoadOptions;
+}
+
+export interface GitHubRepoConfig {
+    name: string;
+    repo: string;
+    branch?: string;
+    tag?: string;
+    path?: string;
+    filename?: string;
+    options?: GitHubLoadOptions;
 }
 
 export interface VueMultiWasmResult {
@@ -111,11 +148,21 @@ export declare function useWasm(
     options?: LoadOptions | Ref<LoadOptions>
 ): VueWasmResult;
 
-export declare function useWasmFromNPM(
-    packageName: string | Ref<string>,
-    options?: LoadOptions | Ref<LoadOptions>
+export declare function useWasmFromGitHub(
+    githubRepo: string | Ref<string>,
+    options?: GitHubLoadOptions | Ref<GitHubLoadOptions>
 ): VueWasmResult;
 
 export declare function useMultipleWasm(
     modules: VueMultiWasmConfig[] | Ref<VueMultiWasmConfig[]>
 ): VueMultiWasmResult;
+
+export declare function useMultipleWasmFromGitHub(
+    githubRepos: GitHubRepoConfig[] | Ref<GitHubRepoConfig[]>
+): VueMultiWasmResult;
+
+/** @deprecated Use useWasmFromGitHub instead */
+export declare function useWasmFromNPM(
+    packageName: string | Ref<string>,
+    options?: LoadOptions | Ref<LoadOptions>
+): VueWasmResult;

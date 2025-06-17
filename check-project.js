@@ -3,15 +3,14 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔍 Vérification du projet GOWM...');
+console.log('🔍 Checking GOWM project...');
 
-// Vérifier les fichiers requis
+// Check required files
 const requiredFiles = [
     'src/index.js',
     'types/index.d.ts',
     'README.md',
     'LICENSE',
-    'CHANGELOG.md',
     'package.json'
 ];
 
@@ -19,29 +18,38 @@ let allGood = true;
 
 requiredFiles.forEach(file => {
     if (fs.existsSync(path.join(__dirname, file))) {
-        console.log(`✅ ${file} existe`);
+        console.log(`✅ ${file} exists`);
     } else {
-        console.log(`❌ ${file} manquant`);
+        console.log(`❌ ${file} missing`);
         allGood = false;
     }
 });
 
-// Vérifier la structure src/
+// Check src/ structure
 const srcFiles = ['index.js', 'loader.js', 'bridge.js'];
 srcFiles.forEach(file => {
     const filePath = path.join(__dirname, 'src', file);
     if (fs.existsSync(filePath)) {
-        console.log(`✅ src/${file} existe`);
+        console.log(`✅ src/${file} exists`);
     } else {
-        console.log(`❌ src/${file} manquant`);
+        console.log(`❌ src/${file} missing`);
         allGood = false;
     }
 });
 
+// Check examples directory
+const examplesPath = path.join(__dirname, 'examples');
+if (fs.existsSync(examplesPath)) {
+    console.log('✅ examples/ directory exists');
+} else {
+    console.log('❌ examples/ directory missing');
+    allGood = false;
+}
+
 if (allGood) {
-    console.log('✨ Toutes les vérifications sont passées !');
+    console.log('✨ All checks passed!');
     process.exit(0);
 } else {
-    console.log('❌ Des fichiers requis sont manquants');
+    console.log('❌ Some required files are missing');
     process.exit(1);
 }

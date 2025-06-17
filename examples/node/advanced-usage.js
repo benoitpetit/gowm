@@ -2,7 +2,7 @@
  * Exemple avancé avec plusieurs modules WASM et gestion d'erreurs
  */
 
-const { load, GoWM, listModules, getStats } = require('../src/index');
+const { load, GoWM, listModules, getStats } = require('../../src/index');
 const path = require('path');
 
 class AdvancedExample {
@@ -14,7 +14,7 @@ class AdvancedExample {
     async loadMathModule() {
         console.log('📐 Chargement du module Math...');
 
-        const wasmPath = path.join(__dirname, 'math-wasm', 'main.wasm');
+        const wasmPath = path.join(__dirname, '..', 'wasm-modules', 'math-wasm', 'main.wasm');
         const math = await this.gowm.load(wasmPath, {
             name: 'math',
             preInit: true
@@ -98,7 +98,7 @@ class AdvancedExample {
 
         // Charger temporairement un autre module
         console.log('   Chargement d\'un module temporaire...');
-        const tempPath = path.join(__dirname, 'math-wasm', 'main.wasm');
+        const tempPath = path.join(__dirname, '..', 'wasm-modules', 'math-wasm', 'main.wasm');
         await this.gowm.load(tempPath, { name: 'temp-math' });
 
         console.log(`   Modules avant nettoyage: ${this.gowm.listModules().join(', ')}`);

@@ -3,7 +3,7 @@ class WasmLoader {
         this.modules = new Map();
         this.isNode = typeof window === 'undefined';
         
-        // Les modules Node.js seront importés de façon dynamique quand nécessaire
+        // Node.js modules will be imported dynamically when needed
         this.fs = null;
         this.path = null;
     }
@@ -16,7 +16,7 @@ class WasmLoader {
     }
 
     async loadModule(wasmPath, options = {}) {
-        // S'assurer que les modules Node.js sont chargés si nécessaire
+        // Ensure Node.js modules are loaded if necessary
         await this.ensureNodeModules();
         
         const moduleId = options.name || (this.isNode ? this.path.basename(wasmPath, '.wasm') : wasmPath.split('/').pop().replace('.wasm', ''));
@@ -26,7 +26,7 @@ class WasmLoader {
         }
 
         try {
-            // Charger wasm_exec.js si nécessaire
+            // Load wasm_exec.js if necessary
             if (!globalThis.Go) {
                 await this.loadGoRuntime(options.goRuntimePath);
             }
@@ -49,12 +49,12 @@ class WasmLoader {
 
             const result = await WebAssembly.instantiate(wasmBytes, go.importObject);
 
-            // Pré-initialisation pour optimiser les performances
+            // Pre-initialization to optimize performance
             if (options.preInit !== false) {
-                // Démarrer Go en arrière-plan pour éviter le blocage
+                // Start Go in the background to avoid blocking
                 go.run(result.instance);
 
-                // Attendre que le module soit prêt
+                // Wait for the module to be ready
                 await this.waitForReady(moduleId);
             }
 
@@ -78,7 +78,7 @@ class WasmLoader {
 
         return new Promise((resolve, reject) => {
             const checkReady = () => {
-                // Vérifier plusieurs signaux de prêt
+                // Check multiple ready signals
                 const isReady = globalThis.__gowm_ready ||
                     (globalThis.Go && globalThis.Go._initialized) ||
                     (globalThis.add && typeof globalThis.add === 'function');
@@ -103,10 +103,10 @@ class WasmLoader {
         const runtimePath = customPath || this.getDefaultRuntimePath();
 
         if (this.isNode) {
-            // Vérifier que le fichier existe
+            // Check that the file exists
             if (!this.fs.existsSync(runtimePath)) {
                 console.warn(`Go runtime not found at ${runtimePath}, using fallback`);
-                // Utiliser le fallback du dossier runtime
+                // Use fallback from runtime folder
                 const fallbackPath = this.path.join(__dirname, '../runtime/wasm_exec.js');
                 if (this.fs.existsSync(fallbackPath)) {
                     require(fallbackPath);
@@ -145,11 +145,11 @@ class WasmLoader {
     unloadModule(name) {
         const module = this.modules.get(name);
         if (module && module.go) {
-            // Nettoyage des ressources Go
+            // Clean up Go resources
             try {
                 module.go.exit(0);
             } catch (e) {
-                // Ignorer les erreurs de nettoyage
+                // Ignore cleanup errors
             }
         }
         return this.modules.delete(name);

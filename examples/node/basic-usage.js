@@ -3,7 +3,7 @@
  * Ce script démontre comment charger et utiliser un module WASM Go
  */
 
-const { load } = require('../src/index');
+const { load } = require('../../src/index');
 const path = require('path');
 
 async function basicExample() {
@@ -11,7 +11,7 @@ async function basicExample() {
 
     try {
         // Chemin vers le module WASM
-        const wasmPath = path.join(__dirname, 'math-wasm', 'main.wasm');
+        const wasmPath = path.join(__dirname, '..', 'wasm-modules', 'math-wasm', 'main.wasm');
 
         console.log('📂 Chargement du module WASM:', wasmPath);
         console.log('⏳ Patientez...\n');

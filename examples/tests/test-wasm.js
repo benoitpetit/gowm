@@ -3,7 +3,7 @@
  * Utile pour CI/CD et tests automatisés
  */
 
-const { load } = require('../src/index');
+const { load } = require('../../src/index');
 const path = require('path');
 
 class WasmTester {
@@ -20,7 +20,7 @@ class WasmTester {
     async runTests() {
         console.log('🧪 GoWM - Tests du module WASM\n');
 
-        const wasmPath = path.join(__dirname, 'math-wasm', 'main.wasm');
+        const wasmPath = path.join(__dirname, '..', 'wasm-modules', 'math-wasm', 'main.wasm');
 
         try {
             console.log('📂 Chargement du module WASM...');
@@ -36,7 +36,7 @@ class WasmTester {
         } catch (error) {
             console.error('❌ Erreur de chargement du module:', error.message);
             console.error('\n💡 Assurez-vous de compiler le module WASM:');
-            console.error('   cd examples/math-wasm && ./build.sh\n');
+            console.error('   cd examples/wasm-modules/math-wasm && ./build.sh\n');
             process.exit(1);
         }
     }
