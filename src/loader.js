@@ -91,27 +91,56 @@ class WasmLoader {
         }
     }
 
-    async waitForReady(moduleId, timeout = 5000) {
+    async waitForReady(moduleId, timeout = 15000) {
         const startTime = Date.now();
 
         return new Promise((resolve, reject) => {
-            const checkReady = () => {
-                // Check multiple ready signals
-                const isReady = globalThis.__gowm_ready ||
-                    (globalThis.Go && globalThis.Go._initialized) ||
-                    (globalThis.add && typeof globalThis.add === 'function');
+            let checkCount = 0;
+            const maxChecks = timeout / 50; // Check every 50ms instead of 10ms
 
-                if (isReady || Date.now() - startTime > timeout) {
-                    if (isReady) {
-                        resolve();
-                    } else {
-                        reject(new Error(`Module ${moduleId} failed to initialize within ${timeout}ms`));
+            const checkReady = () => {
+                checkCount++;
+                
+                // Enhanced ready signal detection
+                const signals = {
+                    gowmReady: globalThis.__gowm_ready === true,
+                    goInitialized: globalThis.Go && globalThis.Go._initialized,
+                    functionsAvailable: typeof globalThis.getAvailableFunctions === 'function',
+                    moduleSpecificFunctions: typeof globalThis.add === 'function' || 
+                                           typeof globalThis.get === 'function' || 
+                                           typeof globalThis.post === 'function',
+                    moduleReady: globalThis[`__${moduleId}_ready`] === true
+                };
+
+                const isReady = signals.gowmReady || signals.goInitialized || 
+                               signals.functionsAvailable || signals.moduleSpecificFunctions || 
+                               signals.moduleReady;
+
+                // Debug logging for troubleshooting
+                if (checkCount % 20 === 0) { // Log every second (20 * 50ms = 1000ms)
+                    console.log(`🔍 GoWM: Checking readiness for ${moduleId} (attempt ${checkCount}/${maxChecks}):`, signals);
+                }
+
+                const timeElapsed = Date.now() - startTime;
+                
+                if (isReady) {
+                    console.log(`✅ GoWM: Module ${moduleId} is ready after ${timeElapsed}ms`);
+                    // Reset the ready flag to prevent interference with other modules
+                    if (globalThis.__gowm_ready) {
+                        globalThis.__gowm_ready = false;
                     }
+                    resolve();
+                } else if (timeElapsed > timeout) {
+                    console.error(`❌ GoWM: Module ${moduleId} timeout after ${timeElapsed}ms. Signals:`, signals);
+                    console.error(`Available global functions:`, Object.keys(globalThis).filter(key => typeof globalThis[key] === 'function'));
+                    reject(new Error(`Module ${moduleId} failed to initialize within ${timeout}ms. Ready signals: ${JSON.stringify(signals)}`));
                 } else {
-                    setTimeout(checkReady, 10);
+                    setTimeout(checkReady, 50);
                 }
             };
-            checkReady();
+            
+            // Start checking after a small delay to let the module initialize
+            setTimeout(checkReady, 100);
         });
     }
 
