@@ -101,8 +101,24 @@ class GoWM {
             return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${basePath}${options.filename}`;
         }
 
+        // If module name is provided, try module-specific paths first
+        let possibleFilenames = [];
+        
+        if (options.name) {
+            possibleFilenames.push(
+                `${options.name}/main.wasm`,
+                `${options.name}/index.wasm`,
+                `${options.name}/${options.name}.wasm`,
+                `${options.name}/module.wasm`,
+                `${options.name}/dist/main.wasm`,
+                `${options.name}/dist/index.wasm`,
+                `${options.name}/build/main.wasm`,
+                `${options.name}/build/index.wasm`
+            );
+        }
+
         // Try different common WASM filenames with fallback
-        const possibleFilenames = [
+        possibleFilenames.push(
             'main.wasm',
             'index.wasm',
             `${repo}.wasm`,
@@ -116,7 +132,7 @@ class GoWM {
             'build/main.wasm',
             'build/index.wasm',
             `build/${repo}.wasm`
-        ];
+        );
 
         // Try each possible filename
         for (const filename of possibleFilenames) {
@@ -192,14 +208,21 @@ class GoWM {
     }
 
     /**
-     * Check if a URL exists (for browsers)
+     * Check if a URL exists (for browsers and Node.js)
      * @param {string} url - URL to check
      * @returns {Promise<boolean>} Whether URL exists
      */
     async checkUrlExists(url) {
         if (typeof fetch === 'undefined') {
-            // In Node.js, assume URL exists (will be validated during actual load)
-            return true;
+            // In Node.js, import node-fetch if available
+            try {
+                const nodeFetch = require('node-fetch');
+                const response = await nodeFetch(url, { method: 'HEAD' });
+                return response.ok;
+            } catch (error) {
+                // If node-fetch is not available, assume URL exists (will be validated during actual load)
+                return true;
+            }
         }
 
         try {

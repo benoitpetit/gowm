@@ -34,12 +34,30 @@ class WasmLoader {
             const go = new globalThis.Go();
             let wasmBytes;
 
-            if (this.isNode) {
+            // Check if wasmPath is a URL
+            const isUrl = wasmPath.startsWith('http://') || wasmPath.startsWith('https://');
+
+            if (this.isNode && !isUrl) {
+                // Local file path in Node.js
                 if (!this.fs.existsSync(wasmPath)) {
                     throw new Error(`WASM file not found: ${wasmPath}`);
                 }
                 wasmBytes = this.fs.readFileSync(wasmPath);
             } else {
+                // Use fetch for URLs in both Node.js and browser
+                if (this.isNode && typeof fetch === 'undefined') {
+                    // Import node-fetch for Node.js environments that don't have fetch
+                    try {
+                        const nodeFetch = require('node-fetch');
+                        global.fetch = nodeFetch;
+                    } catch (e) {
+                        // Fall back to built-in fetch (Node.js 18+) or throw error
+                        if (typeof fetch === 'undefined') {
+                            throw new Error('fetch is not available. Please install node-fetch: npm install node-fetch');
+                        }
+                    }
+                }
+
                 const response = await fetch(wasmPath);
                 if (!response.ok) {
                     throw new Error(`Failed to fetch WASM file: ${response.status} ${response.statusText}`);
