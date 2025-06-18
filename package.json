@@ -23,25 +23,17 @@
         "composables/",
         "runtime/",
         "README.md",
-        "LICENSE",
-        "CHANGELOG.md"
+        "LICENSE"
     ],
     "scripts": {
-        "test": "node examples/tests/test-wasm.js",
-        "test:basic": "node examples/node/basic-usage.js",
-        "test:advanced": "node examples/node/advanced-usage.js",
-        "test:wasm": "node examples/tests/test-wasm.js",
-        "test:image": "node examples/tests/test-image-wasm.js",
-        "test:github": "node examples/node/github-usage.js",
+        "test": "node examples/node/basic.js",
+        "test:basic": "node examples/node/basic.js",
+        "test:crypto": "node examples/node/crypto.js",
         "check": "node check-project.js",
-        "build:example": "cd examples/wasm-modules/math-wasm && ./build.sh",
-        "build:image": "cd examples/wasm-modules/image-wasm && ./build.sh",
-        "build:examples": "npm run build:example && npm run build:image",
         "demo:serve": "npx serve examples/browser -p 3000",
-        "demo:browser": "npm run demo:serve && echo 'Open http://localhost:3000/browser-demo.html'",
-        "convert:webp": "node examples/tools/convert-to-webp.js",
+        "demo:browser": "npm run demo:serve && echo 'Open http://localhost:3000'",
         "build": "echo 'No build step needed for this package'",
-        "prepublishOnly": "npm run check && npm test"
+        "prepublishOnly": "npm run check"
     },
     "keywords": [
         "wasm",
