@@ -1,7 +1,7 @@
 {
     "name": "gowm",
-    "version": "1.0.6",
-    "description": "Go Wasm Manager - Simplify integration of Go WebAssembly modules in your JavaScript projects",
+    "version": "1.0.7",
+    "description": "Go WebAssembly Manager - Simplify integration of Go WebAssembly modules in your JavaScript projects with GitHub repository support, React hooks, and Vue composables",
     "main": "src/index.js",
     "browser": "src/browser.js",
     "module": "src/browser.js",
@@ -53,14 +53,24 @@
         "react",
         "vue",
         "vuejs",
+        "github",
         "bridge",
-        "loader"
+        "loader",
+        "manager",
+        "typescript"
     ],
     "author": "devbyben",
     "license": "MIT",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/benoitpetit/gowm.git"
+    },
+    "bugs": {
+        "url": "https://github.com/benoitpetit/gowm/issues"
+    },
+    "homepage": "https://github.com/benoitpetit/gowm#readme",
+    "engines": {
+        "node": ">=14.0.0"
     },
     "devDependencies": {
         "@types/node": "^20.0.0"

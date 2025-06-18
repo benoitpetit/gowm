@@ -1,11 +1,29 @@
+/**
+ * GoWM Vue Composables
+ * 
+ * Vue 3 composables for loading and managing Go WebAssembly modules.
+ * Provides reactive state management for WASM modules with automatic cleanup.
+ * 
+ * @author devbyben
+ * @license MIT
+ */
+
 const { ref, onMounted, onUnmounted, watch } = require('vue');
 const { load, loadFromGitHub } = require('../src/index');
 
 /**
  * Vue composable for loading and using Go WASM modules
- * @param {string|Ref<string>} wasmPath - Path to the WASM file
- * @param {object|Ref<object>} options - Loading options
- * @returns {object} Object containing wasm, loading, error and reload
+ * 
+ * @param {string|Ref<string>} wasmPath - Path to the WASM file or reactive reference
+ * @param {Object|Ref<Object>} [options={}] - Loading options or reactive reference
+ * @param {string} [options.name] - Module identifier name
+ * @param {string} [options.goRuntimePath] - Custom path to wasm_exec.js
+ * @param {boolean} [options.preInit=true] - Pre-initialize the module
+ * @returns {Object} Composable state
+ * @returns {Ref<WasmBridge|null>} returns.wasm - Reactive reference to the loaded WASM bridge instance
+ * @returns {Ref<boolean>} returns.loading - Reactive loading state
+ * @returns {Ref<Error|null>} returns.error - Reactive error state
+ * @returns {Function} returns.reload - Function to reload the module
  */
 function useWasm(wasmPath, options = {}) {
     const wasm = ref(null);
@@ -51,7 +69,7 @@ function useWasm(wasmPath, options = {}) {
         }
     };
 
-    // Watcher for path or options changes
+    // Watch for path or options changes
     if (typeof wasmPath.value !== 'undefined') {
         watch(wasmPath, loadWasm);
     }
@@ -85,13 +103,19 @@ function useWasm(wasmPath, options = {}) {
 
 /**
  * Vue composable for loading a WASM module from GitHub repository
- * @param {string|Ref<string>} githubRepo - GitHub repository ("owner/repo" or full URL)
- * @param {object|Ref<object>} options - Loading options
- * @param {string} options.branch - Git branch (default: 'main')
- * @param {string} options.tag - Git tag (takes precedence over branch)
- * @param {string} options.path - Path within repository
- * @param {string} options.filename - Specific filename
- * @returns {object} Object containing wasm, loading, error and reload
+ * 
+ * @param {string|Ref<string>} githubRepo - GitHub repository ("owner/repo" or full URL) or reactive reference
+ * @param {Object|Ref<Object>} [options={}] - Loading options or reactive reference
+ * @param {string} [options.branch='main'] - Git branch
+ * @param {string} [options.tag] - Git tag (takes precedence over branch)
+ * @param {string} [options.path] - Path within repository
+ * @param {string} [options.filename] - Specific filename
+ * @param {string} [options.name] - Module name
+ * @returns {Object} Composable state
+ * @returns {Ref<WasmBridge|null>} returns.wasm - Reactive reference to the loaded WASM bridge instance
+ * @returns {Ref<boolean>} returns.loading - Reactive loading state
+ * @returns {Ref<Error|null>} returns.error - Reactive error state
+ * @returns {Function} returns.reload - Function to reload the module
  */
 function useWasmFromGitHub(githubRepo, options = {}) {
     const wasm = ref(null);
@@ -137,7 +161,7 @@ function useWasmFromGitHub(githubRepo, options = {}) {
         }
     };
 
-    // Watcher for githubRepo or options changes
+    // Watch for githubRepo or options changes
     if (typeof githubRepo.value !== 'undefined') {
         watch(githubRepo, loadWasm);
     }
@@ -170,9 +194,19 @@ function useWasmFromGitHub(githubRepo, options = {}) {
 }
 
 /**
- * Composable for using multiple WASM modules
- * @param {Array|Ref<Array>} modules - Array of objects {name, path, options} or {name, github, options}
- * @returns {object} Object containing modules, loading, errors and reload
+ * Vue composable for loading multiple WASM modules
+ * Supports both local files and GitHub repositories
+ * 
+ * @param {Array|Ref<Array>} modules - Array of module configurations or reactive reference
+ * @param {string} modules[].name - Module name (required)
+ * @param {string} [modules[].path] - Local path to WASM file
+ * @param {string} [modules[].github] - GitHub repository
+ * @param {Object} [modules[].options] - Module-specific options
+ * @returns {Object} Composable state
+ * @returns {Ref<Object>} returns.modules - Reactive object with module names as keys and WasmBridge instances as values
+ * @returns {Ref<boolean>} returns.loading - Reactive global loading state
+ * @returns {Ref<Object>} returns.errors - Reactive object with module names as keys and Error instances as values
+ * @returns {Function} returns.reload - Function to reload all modules
  */
 function useMultipleWasm(modules = []) {
     const wasmModules = ref({});
@@ -243,7 +277,7 @@ function useMultipleWasm(modules = []) {
         }
     };
 
-    // Watcher for modules changes
+    // Watch for modules changes
     if (typeof modules.value !== 'undefined') {
         watch(modules, loadModules, { deep: true });
     }
@@ -254,13 +288,13 @@ function useMultipleWasm(modules = []) {
 
     onUnmounted(() => {
         mounted = false;
-        // Clean up all WASM modules if possible
-        for (const wasmInstance of Object.values(wasmModules.value)) {
+        // Clean up all WASM modules
+        for (const [name, wasmInstance] of Object.entries(wasmModules.value)) {
             if (wasmInstance && typeof wasmInstance.cleanup === 'function') {
                 try {
                     wasmInstance.cleanup();
                 } catch (err) {
-                    console.warn('Error during WASM module cleanup:', err.message);
+                    console.warn(`Error during cleanup of module ${name}:`, err.message);
                 }
             }
         }
@@ -275,12 +309,24 @@ function useMultipleWasm(modules = []) {
 }
 
 /**
- * Advanced composable for loading multiple WASM modules from GitHub
- * @param {Array|Ref<Array>} githubRepos - Array of GitHub repository configurations
- * @returns {object} Object containing modules, loading, errors and reload
+ * Vue composable for loading multiple WASM modules from GitHub repositories
+ * 
+ * @param {Array|Ref<Array>} githubRepos - Array of GitHub repository configurations or reactive reference
+ * @param {string} githubRepos[].name - Module name (required)  
+ * @param {string} githubRepos[].repo - GitHub repository (required)
+ * @param {string} [githubRepos[].branch] - Git branch
+ * @param {string} [githubRepos[].tag] - Git tag
+ * @param {string} [githubRepos[].path] - Path within repository
+ * @param {string} [githubRepos[].filename] - Specific filename
+ * @param {Object} [githubRepos[].options] - Module-specific options
+ * @returns {Object} Composable state
+ * @returns {Ref<Object>} returns.modules - Reactive object with module names as keys and WasmBridge instances as values
+ * @returns {Ref<boolean>} returns.loading - Reactive global loading state
+ * @returns {Ref<Object>} returns.errors - Reactive object with module names as keys and Error instances as values
+ * @returns {Function} returns.reload - Function to reload all modules
  */
 function useMultipleWasmFromGitHub(githubRepos = []) {
-    const wasmModules = ref({});
+    const modules = ref({});
     const loading = ref(true);
     const errors = ref({});
 
@@ -318,7 +364,7 @@ function useMultipleWasmFromGitHub(githubRepos = []) {
                     const wasmInstance = await loadFromGitHub(repo, loadOptions);
 
                     if (mounted) {
-                        wasmModules.value[name] = wasmInstance;
+                        modules.value[name] = wasmInstance;
                         console.log(`✅ GitHub module ${name} loaded successfully`);
                     }
                 } catch (err) {
@@ -345,12 +391,12 @@ function useMultipleWasmFromGitHub(githubRepos = []) {
     const reload = () => {
         if (mounted) {
             // Clear existing modules before reloading
-            wasmModules.value = {};
+            modules.value = {};
             loadModules();
         }
     };
 
-    // Watcher for repo changes
+    // Watch for githubRepos changes
     if (typeof githubRepos.value !== 'undefined') {
         watch(githubRepos, loadModules, { deep: true });
     }
@@ -361,36 +407,41 @@ function useMultipleWasmFromGitHub(githubRepos = []) {
 
     onUnmounted(() => {
         mounted = false;
-        // Clean up all WASM modules if possible
-        for (const wasmInstance of Object.values(wasmModules.value)) {
+        // Clean up all WASM modules
+        for (const [name, wasmInstance] of Object.entries(modules.value)) {
             if (wasmInstance && typeof wasmInstance.cleanup === 'function') {
                 try {
                     wasmInstance.cleanup();
                 } catch (err) {
-                    console.warn('Error during WASM module cleanup:', err.message);
+                    console.warn(`Error during cleanup of module ${name}:`, err.message);
                 }
             }
         }
     });
 
     return {
-        modules: wasmModules,
+        modules,
         loading,
         errors,
         reload
     };
 }
 
-// Legacy function for backward compatibility
 /**
- * @deprecated Use useWasmFromGitHub instead
+ * Legacy Vue composable for NPM package loading
+ * @deprecated This composable is deprecated and will be removed in future versions. Use useWasmFromGitHub instead.
+ * @param {string|Ref<string>} packageName - NPM package name or reactive reference
+ * @param {Object|Ref<Object>} [options={}] - Loading options or reactive reference
+ * @returns {Object} Composable state
+ * @returns {Ref<WasmBridge|null>} returns.wasm - Reactive reference to the loaded WASM bridge instance
+ * @returns {Ref<boolean>} returns.loading - Reactive loading state
+ * @returns {Ref<Error|null>} returns.error - Reactive error state
+ * @returns {Function} returns.reload - Function to reload the module
  */
 function useWasmFromNPM(packageName, options = {}) {
-    console.warn('useWasmFromNPM is deprecated. Use useWasmFromGitHub instead.');
+    console.warn('⚠️  WARNING: useWasmFromNPM is deprecated and will be removed in a future version. Please use useWasmFromGitHub instead for better reliability and performance.');
     
-    // For now, redirect to the old implementation
     const { loadFromNPM } = require('../src/index');
-    
     const wasm = ref(null);
     const loading = ref(true);
     const error = ref(null);
@@ -404,6 +455,7 @@ function useWasmFromNPM(packageName, options = {}) {
             loading.value = true;
             error.value = null;
 
+            // Resolve reactive values
             const pkg = typeof packageName.value !== 'undefined' ? packageName.value : packageName;
             const opts = typeof options.value !== 'undefined' ? options.value : options;
 
@@ -433,7 +485,7 @@ function useWasmFromNPM(packageName, options = {}) {
         }
     };
 
-    // Watcher for packageName or options changes
+    // Watch for packageName or options changes
     if (typeof packageName.value !== 'undefined') {
         watch(packageName, loadWasm);
     }
@@ -465,10 +517,16 @@ function useWasmFromNPM(packageName, options = {}) {
     };
 }
 
+/**
+ * Module exports for Vue composables
+ */
 module.exports = {
     useWasm,
     useWasmFromGitHub,
     useMultipleWasm,
     useMultipleWasmFromGitHub,
-    useWasmFromNPM // Deprecated but kept for compatibility
+    
+    // Deprecated exports (kept for backward compatibility)
+    /** @deprecated Use useWasmFromGitHub instead */
+    useWasmFromNPM
 };

@@ -1,199 +1,204 @@
 # 📚 GoWM Examples
 
-This folder contains comprehensive examples of using GoWM to integrate Go WebAssembly modules in different JavaScript environments.
+Clean, simple examples demonstrating GoWM integration with Go WebAssembly modules from the [wasm-projects](https://github.com/benoitpetit/wasm-projects) repository.
 
-## 🗂️ Organized Structure
+## 🗂️ Structure
 
 ```
 examples/
-├── README.md                    # This documentation
-│
-├── 🎯 node/                    # Node.js Examples
-│   ├── basic-usage.js          # Simple Node.js introduction
-│   ├── advanced-usage.js       # Advanced Node.js features
-│   └── github-usage.js         # Loading from GitHub
-│
-├── 🌐 browser/                 # Browser Examples
-│   ├── browser-demo.html       # Standalone browser demo
-│   └── assets/                 # Browser demo assets
-│       └── styles.css
-│
-├── ⚛️ frameworks/              # Frontend Framework Examples
-│   ├── react/
-│   │   └── react-calculator.jsx
-│   └── vue/
-│       ├── vue-calculator.vue
-│       └── vue-github-calculator.vue
-│
-├── 🧪 tests/                   # Automated Tests
-│   ├── test-wasm.js           # Basic WASM tests
-│   └── test-image-wasm.js     # Image processing tests
-│
-├── 🛠️ tools/                   # Utility Scripts
-│   ├── convert-to-webp.js     # Image conversion utility
-│   └── assets/                # Test assets
-│       └── photo.png
-│
-└── 📦 wasm-modules/            # WASM Source Code
-    ├── math-wasm/             # Mathematical functions
-    │   ├── main.go
-    │   ├── build.sh
-    │   ├── main.wasm
-    │   └── README.md
-    └── image-wasm/            # Image processing
-        ├── main.go
-        ├── build.sh
-        ├── main.wasm
-        └── README.md
+├── README.md           # This documentation
+├── node/              # Node.js Examples
+│   ├── basic.js       # Math WASM module basics
+│   └── crypto.js      # Crypto operations
+├── browser/           # Browser Examples  
+│   └── index.html     # QR code generator
+├── react/             # React Integration
+│   └── Calculator.jsx # Math calculator component
+└── vue/               # Vue 3 Integration
+    └── ImageProcessor.vue # Image processing component
 ```
 
 ## 🚀 Quick Start
 
-### 1. Build WASM Modules
+### Prerequisites
+- Node.js >= 14.0.0
+- Modern browser with WebAssembly support
+- For React/Vue: Framework dependencies
 
+### Running Examples
+
+**Node.js Examples:**
 ```bash
-# Build math module
-cd examples/wasm-modules/math-wasm
-./build.sh
+# Basic math operations
+node examples/node/basic.js
 
-# Build image processing module
-cd ../image-wasm
-./build.sh
+# Crypto operations
+node examples/node/crypto.js
 ```
 
-### 2. Run Node.js Examples
-
-```bash
-# Basic usage
-node examples/node/basic-usage.js
-
-# Advanced features
-node examples/node/advanced-usage.js
-
-# GitHub loading
-node examples/node/github-usage.js
-```
-
-### 3. Run Browser Demo
-
+**Browser Example:**
 ```bash
 # Serve with any HTTP server
 npx serve examples/browser/
-# Open http://localhost:3000/browser-demo.html
+# Open http://localhost:3000
 ```
 
-### 4. Run Tests
-
+**React Example:**
 ```bash
-# Run all tests
-npm test
-
-# Run specific tests
-node examples/tests/test-wasm.js
-node examples/tests/test-image-wasm.js
+# In your React project
+import Calculator from './examples/react/Calculator.jsx';
+// Use <Calculator /> component
 ```
 
-## 📖 Example Categories
+**Vue Example:**
+```bash
+# In your Vue 3 project
+import ImageProcessor from './examples/vue/ImageProcessor.vue';
+// Use <ImageProcessor /> component
+```
 
-### 🎯 Node.js Examples (`node/`)
+## 📖 Examples Overview
 
-Learn GoWM fundamentals in Node.js environment:
+### 🎯 Node.js Examples
 
-- **`basic-usage.js`** - Essential GoWM concepts and simple function calls
-- **`advanced-usage.js`** - Multiple modules, performance monitoring, memory management
-- **`github-usage.js`** - Loading WASM modules directly from GitHub repositories
+#### `basic.js` - Math Operations
+Demonstrates loading and using the math WASM module for arithmetic operations:
+- Basic operations: add, subtract, multiply, divide
+- Advanced operations: power, factorial
+- Error handling for division by zero
+- Module statistics and function listing
 
-### 🌐 Browser Examples (`browser/`)
+#### `crypto.js` - Cryptographic Operations
+Shows cryptographic functions using the crypto WASM module:
+- SHA256 hashing
+- AES encryption/decryption with key generation
+- UUID generation
+- Proper error handling for crypto operations
 
-Web browser integration and usage:
+### 🌐 Browser Example
 
-- **`browser-demo.html`** - Complete standalone browser demonstration
-- Modern UI with responsive design
-- No external dependencies required
+#### `index.html` - QR Code Generator
+Interactive QR code generator using the qr-wasm module:
+- Text to QR code conversion
+- Adjustable size and error correction levels
+- Real-time preview and download functionality
+- Clean, responsive UI with error handling
 
-### ⚛️ Framework Examples (`frameworks/`)
+### ⚛️ React Integration
 
-Integration with popular frontend frameworks:
+#### `Calculator.jsx` - Interactive Calculator
+React component using the `useWasmFromGitHub` hook:
+- Real-time calculations with math WASM module
+- Loading states and error handling
+- Dynamic function selection
+- Modern component architecture with hooks
 
-**React** (`frameworks/react/`):
-- Interactive calculator using `useWasm` hooks
-- Real-time calculations with WASM backend
-- Error handling and loading states
+### 🖖 Vue 3 Integration
 
-**Vue.js** (`frameworks/vue/`):
-- Calculator with Vue 3 Composition API
-- GitHub repository loading example
-- Reactive state management with WASM
+#### `ImageProcessor.vue` - Image Processing Tool
+Vue 3 component with Composition API:
+- Image upload and processing with image-wasm module
+- Multiple operations: compress, resize, format conversion
+- Before/after comparison with file size metrics
+- Download processed images
 
-### 🧪 Tests (`tests/`)
+## 🔧 WASM Modules Used
 
-Automated testing and validation:
+All examples use modules from [wasm-projects](https://github.com/benoitpetit/wasm-projects):
 
-- **`test-wasm.js`** - Core functionality validation
-- **`test-image-wasm.js`** - Image processing pipeline tests
-- Performance benchmarks
-- Error handling verification
+| Module | Repository Path | Functions |
+|--------|----------------|-----------|
+| **math-wasm** | `math-wasm/main.wasm` | add, subtract, multiply, divide, power, factorial |
+| **crypto-wasm** | `crypto-wasm/main.wasm` | hashSHA256, encryptAES, decryptAES, generateAESKey, generateUUID |
+| **qr-wasm** | `qr-wasm/main.wasm` | generateQRCode, with size and error correction options |
+| **image-wasm** | `image-wasm/main.wasm` | compressJPEG, compressPNG, convertToWebP, resizeImage |
 
-### 🛠️ Tools (`tools/`)
+## 💡 Key Features Demonstrated
 
-Utility scripts and practical applications:
+### GitHub Loading
+All examples use `loadFromGitHub()` to load WASM modules directly from repositories:
+```javascript
+const wasm = await loadFromGitHub('benoitpetit/wasm-projects', {
+    path: 'math-wasm',
+    filename: 'main.wasm',
+    name: 'math'
+});
+```
 
-- **`convert-to-webp.js`** - CLI tool for image format conversion
-- Demonstrates real-world WASM usage
-- Production-ready script example
+### Error Handling
+Proper error handling patterns for WASM operations:
+```javascript
+const result = wasm.call('divide', 10, 0);
+if (typeof result === 'string' && result.includes('Erreur')) {
+    console.log('Division by zero handled:', result);
+}
+```
 
-### 📦 WASM Modules (`wasm-modules/`)
+### Framework Integration
+- **React**: Custom hooks with loading/error states
+- **Vue 3**: Composition API with reactive WASM state
+- **Browser**: ES6 modules with clean async/await patterns
 
-Source code for Go WebAssembly modules:
+### Performance Optimization
+- Silent mode for production: `wasm.call('setSilentMode', true)`
+- Module statistics: `wasm.getStats()`
+- Memory usage monitoring
 
-- **`math-wasm/`** - Mathematical operations (add, multiply, factorial, etc.)
-- **`image-wasm/`** - Image processing (resize, compress, format conversion)
-- Complete Go source code with build scripts
-- Ready-to-use compiled WASM files
+## 🎨 Design Principles
 
-## 🔧 Technical Requirements
+### Simplicity
+- Minimal code, maximum clarity
+- Essential features only
+- Clean, readable structure
 
-### Core Requirements
-- **Node.js** >= 14.0.0
-- **Go** >= 1.21 (for building WASM modules)
-- **Modern browser** with WebAssembly support
+### Consistency
+- Unified error handling patterns
+- Consistent naming conventions
+- Standardized UI/UX across examples
 
-### Framework-Specific
-- **React** >= 16.8.0 (for hooks)
-- **Vue.js** >= 3.0.0 (for Composition API)
-- **Bundler** with WebAssembly support (Webpack, Vite, etc.)
+### Real-world Usage
+- Practical use cases for each WASM module
+- Production-ready error handling
+- Modern JavaScript/framework patterns
 
-## 📚 Learning Path
+## 🔍 Testing Examples
 
-1. **Start with Node.js basics** (`node/basic-usage.js`)
-2. **Explore advanced features** (`node/advanced-usage.js`)
-3. **Try browser integration** (`browser/browser-demo.html`)
-4. **Learn framework integration** (`frameworks/react/` or `frameworks/vue/`)
-5. **Use GitHub loading** (`node/github-usage.js`)
-6. **Build your own tools** (inspired by `tools/convert-to-webp.js`)
+### Manual Testing
+1. **Node.js**: Run scripts and verify console output
+2. **Browser**: Test QR generation with different inputs
+3. **React**: Verify calculator operations and error states
+4. **Vue**: Test image processing with various file types
+
+### Expected Behavior
+- ✅ Modules load successfully from GitHub
+- ✅ All WASM functions execute correctly
+- ✅ Error conditions are handled gracefully
+- ✅ UI remains responsive during operations
+- ✅ Results are accurate and properly formatted
+
+## 🚨 Troubleshooting
+
+**Common Issues:**
+
+1. **CORS Errors**: Use HTTP server, not `file://` protocol
+2. **Module Loading Fails**: Check internet connection and GitHub repository access
+3. **WASM Execution Errors**: Verify function names and parameter types
+4. **Framework Issues**: Ensure proper import paths and dependencies
+
+**Debug Tips:**
+- Check browser console for detailed error messages
+- Verify WASM module availability at GitHub URLs
+- Test with simple examples before complex ones
 
 ## 🤝 Contributing
 
 When adding new examples:
+1. Keep them simple and focused
+2. Use consistent error handling patterns
+3. Include comprehensive comments
+4. Test across different environments
+5. Update this README accordingly
 
-1. Place in the appropriate category folder
-2. Include comprehensive comments
-3. Add error handling
-4. Update this README
-5. Test across different environments
+## 📝 License
 
-## 🆘 Troubleshooting
-
-**Common Issues:**
-
-1. **WASM module not found**: Build modules first with `./build.sh`
-2. **Go not installed**: Install Go from https://golang.org/
-3. **Browser CORS errors**: Use a local HTTP server, not `file://`
-4. **Module loading fails**: Check file paths and permissions
-
-**Getting Help:**
-
-- Check example comments for detailed explanations
-- Review test files for usage patterns
-- Consult the main project README
-- Open an issue for bugs or questions
+MIT License - Use these examples freely in your projects.

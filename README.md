@@ -1,24 +1,30 @@
-# GoWM - Go Wasm Manager
+# GoWM - Go WebAssembly Manager
 
 <div align="center">
   <img src="./logo.png" alt="GoWM Logo" width="200" />
 
-  <p><strong>GoWM</strong> simplifies the integration of Go WebAssembly modules into your JavaScript projects.</p>
+  <p><strong>GoWM</strong> simplifies the integration of Go WebAssembly modules into your JavaScript projects with support for GitHub repositories, React hooks, and Vue composables.</p>
+
+  <p>
+    <a href="https://www.npmjs.com/package/gowm"><img src="https://img.shields.io/npm/v/gowm.svg" alt="npm version"></a>
+    <a href="https://github.com/benoitpetit/gowm/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/gowm.svg" alt="license"></a>
+    <a href="https://www.npmjs.com/package/gowm"><img src="https://img.shields.io/npm/dm/gowm.svg" alt="downloads"></a>
+  </p>
 </div>
 
 ## ✨ Features
 
-- 🚀 **Unified interface** for loading Go WASM modules
-- 🔧 **Node.js and browser support** with automatic detection
-- ⚛️ **Built-in React hooks** (`useWasm`, `useWasmFromGitHub`)
-- 🖖 **Vue.js composables** for Vue 3 (`useWasm`, `useWasmFromGitHub`, `useMultipleWasm`)
-- 📦 **GitHub repository loading** with automatic WASM file resolution
-- 🏷️ **Branch and tag support** for precise version control
-- 🛡️ **Robust error handling** and function detection
-- 🧹 **Automatic memory management** and resource cleanup
-- 📊 **Statistics and monitoring** for loaded modules
-- 🔄 **Synchronous and asynchronous calls** with `call()` and `callAsync()`
-- 🎯 **Singleton API** and GoWM class for different use cases
+- 🚀 **Unified Interface** - Load Go WASM modules from local files or GitHub repositories
+- 🔧 **Cross-Platform** - Full support for Node.js and browser environments
+- ⚛️ **React Integration** - Built-in hooks (`useWasm`, `useWasmFromGitHub`)
+- 🖖 **Vue 3 Support** - Reactive composables with automatic cleanup
+- 📦 **GitHub Direct Loading** - Load WASM modules directly from GitHub repositories
+- 🏷️ **Version Control** - Support for branches, tags, and specific commits
+- 🛡️ **Error Handling** - Robust error handling and automatic retries
+- 🧹 **Memory Management** - Automatic resource cleanup and memory management
+- 📊 **Module Statistics** - Built-in monitoring and performance metrics
+- 🔄 **Flexible Calls** - Both synchronous and asynchronous function calls
+- 🎯 **Multiple APIs** - Singleton API and class-based approach
 
 ## 📥 Installation
 
@@ -26,42 +32,44 @@
 npm install gowm
 # or
 yarn add gowm
+# or
+pnpm add gowm
 ```
 
 ## 🚀 Quick Start
 
-### Node.js
+### Basic Usage (Node.js)
 
 ```javascript
 const { load, loadFromGitHub } = require('gowm');
 
 async function example() {
   try {
-    // Load a WASM module from local file
-    const math = await load('./math.wasm', { name: 'math' });
+    // Load from local file
+    const localWasm = await load('./math.wasm', { name: 'math' });
     
-    // Or load directly from GitHub repository
-    const githubMath = await loadFromGitHub('awesome-org/wasm-math', { 
+    // Load directly from GitHub repository
+    const githubWasm = await loadFromGitHub('awesome-org/wasm-math', { 
       name: 'github-math',
       branch: 'main' 
     });
     
     // Call functions
-    const result = math.call('add', 5, 3);
-    console.log('5 + 3 =', result);
+    const result = localWasm.call('add', 5, 3);
+    console.log('5 + 3 =', result); // 8
     
-    // Async call
-    const asyncResult = await githubMath.callAsync('multiply', 4, 7);
-    console.log('4 * 7 =', asyncResult);
+    // Async calls
+    const asyncResult = await githubWasm.callAsync('multiply', 4, 7);
+    console.log('4 * 7 =', asyncResult); // 28
     
-    // Check if a function exists
-    if (math.hasFunction('subtract')) {
-      console.log('Function subtract is available');
+    // Check available functions
+    if (localWasm.hasFunction('subtract')) {
+      console.log('subtract function is available');
     }
     
-    // Get statistics
-    const stats = math.getStats();
-    console.log('Functions:', stats.functions);
+    // Get module statistics
+    const stats = localWasm.getStats();
+    console.log('Available functions:', stats.functions);
     
   } catch (error) {
     console.error('Error:', error);
@@ -71,7 +79,7 @@ async function example() {
 example();
 ```
 
-### React
+### React Integration
 
 ```jsx
 import React, { useState } from 'react';
@@ -90,7 +98,7 @@ function CalculatorComponent() {
         const sum = await wasm.callAsync('add', 10, 20);
         setResult(sum);
       } catch (err) {
-        console.error('Calculation error:', err);
+        console.error('Calculation failed:', err);
       }
     }
   };
@@ -107,18 +115,18 @@ function CalculatorComponent() {
 }
 ```
 
-### Vue.js
+### Vue 3 Integration
 
 ```vue
 <template>
   <div class="calculator">
     <div v-if="loading">Loading WASM module from GitHub...</div>
-    <div v-else-if="error">Error: {{ error.message }}</div>
+    <div v-else-if="error" class="error">Error: {{ error.message }}</div>
     <div v-else>
       <input v-model.number="num1" type="number" placeholder="First number" />
       <input v-model.number="num2" type="number" placeholder="Second number" />
       <button @click="calculate">Calculate {{ num1 }} + {{ num2 }}</button>
-      <div v-if="result !== null">Result: {{ result }}</div>
+      <div v-if="result !== null" class="result">Result: {{ result }}</div>
     </div>
   </div>
 </template>
@@ -156,17 +164,18 @@ export default {
 </script>
 ```
 
-### Loading from GitHub
+## 🐙 GitHub Repository Loading
+
+GoWM excels at loading WASM modules directly from GitHub repositories with intelligent file discovery:
 
 ```javascript
 const { loadFromGitHub } = require('gowm');
 
-async function useGitHubLibrary() {
-  try {
-    // Basic loading - tries common filenames automatically
+async function examples() {
+  // Basic loading - automatic file discovery
     const math = await loadFromGitHub('awesome-org/wasm-math');
     
-    // Advanced loading with options
+  // Advanced loading with specific options
     const imageProcessor = await loadFromGitHub('image-corp/wasm-image', {
       branch: 'develop',        // Use develop branch
       path: 'dist',            // Look in dist folder
@@ -185,31 +194,36 @@ async function useGitHubLibrary() {
       'https://github.com/org/repo', 
       { filename: 'module.wasm' }
     );
-    
-    const result = math.call('add', 10, 20);
-    console.log('Result:', result);
-  } catch (error) {
-    console.error('GitHub loading error:', error);
-  }
 }
 ```
 
+### Automatic File Discovery
+
+GoWM automatically searches for WASM files in common locations:
+
+- **Root directory**: `main.wasm`, `index.wasm`, `{repo-name}.wasm`
+- **Common folders**: `wasm/`, `dist/`, `build/`
+- **GitHub releases**: Searches release assets for WASM files
+- **Custom paths**: Respects your specified path and filename
+
 ## 📚 API Reference
 
-### load(wasmPath, options)
+### Core Functions
 
-Loads a WASM module from a local file.
+#### `load(wasmPath, options)`
+
+Loads a WASM module from a local file or URL.
 
 **Parameters:**
-- `wasmPath` (string): Path to the .wasm file
+- `wasmPath` (string): Path to the .wasm file or URL
 - `options` (object, optional):
-  - `name` (string): Module name (default: 'default')
+  - `name` (string): Module identifier (default: 'default')
   - `goRuntimePath` (string): Custom path to wasm_exec.js
   - `preInit` (boolean): Pre-initialize the module (default: true)
 
 **Returns:** Promise<WasmBridge>
 
-### loadFromGitHub(githubRepo, options)
+#### `loadFromGitHub(githubRepo, options)`
 
 Loads a WASM module from a GitHub repository with automatic file resolution.
 
@@ -224,14 +238,9 @@ Loads a WASM module from a GitHub repository with automatic file resolution.
   - `goRuntimePath` (string): Custom path to wasm_exec.js
   - `preInit` (boolean): Pre-initialize the module (default: true)
 
-**Automatic resolution:** Tries multiple common locations:
-- `main.wasm`, `index.wasm`, `{repo-name}.wasm`
-- `wasm/`, `dist/`, `build/` directories
-- GitHub releases (if available)
-
 **Returns:** Promise<WasmBridge>
 
-### get(name)
+#### `get(name)`
 
 Retrieves an already loaded module by name.
 
@@ -240,6 +249,55 @@ Retrieves an already loaded module by name.
 
 **Returns:** WasmBridge | null
 
+### WasmBridge Methods
+
+#### `call(funcName, ...args)`
+
+Calls a WASM function synchronously.
+
+**Parameters:**
+- `funcName` (string): Name of the function to call
+- `...args`: Function arguments
+
+**Returns:** Function result
+
+#### `callAsync(funcName, ...args)`
+
+Calls a WASM function asynchronously.
+
+**Parameters:**
+- `funcName` (string): Name of the function to call
+- `...args`: Function arguments
+
+**Returns:** Promise<Function result>
+
+#### `hasFunction(funcName)`
+
+Checks if a function exists in the WASM module.
+
+**Parameters:**
+- `funcName` (string): Function name to check
+
+**Returns:** boolean
+
+#### `getAvailableFunctions()`
+
+Gets a list of all available functions in the module.
+
+**Returns:** string[]
+
+#### `getStats()`
+
+Gets module statistics and information.
+
+**Returns:** Object with statistics
+
+#### `cleanup()`
+
+Manually clean up module resources.
+
+**Returns:** void
+
 ### Utility Functions
 
 - `listModules()`: List all loaded modules
@@ -247,331 +305,203 @@ Retrieves an already loaded module by name.
 - `unload(name)`: Unload a specific module
 - `unloadAll()`: Unload all modules
 - `isLoaded(name)`: Check if a module is loaded
-- `getTotalMemoryUsage()`: Get total memory usage across all modules
+- `getTotalMemoryUsage()`: Get total memory usage
 
-### WasmBridge
+## ⚛️ React Hooks
 
-Main interface for interacting with a loaded WASM module.
+### `useWasm(wasmPath, options)`
 
-#### Methods
+Hook for loading local WASM modules.
 
-- `call(funcName, ...args)`: Synchronous call to a Go WASM function
-- `callAsync(funcName, ...args)`: Asynchronous call (returns a Promise)
-- `hasFunction(funcName)`: Check if a function exists in the module
-- `getAvailableFunctions()`: Get list of available functions
-- `registerCallback(name, callback)`: Register a JavaScript callback accessible from Go
-- `unregisterCallback(name)`: Remove a JavaScript callback
-- `createBuffer(data)`: Create a buffer for data transfer (Float64Array, Uint8Array, string)
-- `getStats()`: Get module statistics (functions, callbacks, memory)
+```jsx
+import { useWasm } from 'gowm/hooks/useWasm';
 
-### Vue.js Composables
+function MyComponent() {
+  const { wasm, loading, error } = useWasm('./my-module.wasm', {
+    name: 'myModule'
+  });
 
-#### useWasm(wasmPath, options)
+  // Use wasm when loaded
+}
+```
 
-Vue 3 composable for loading and using a WASM module with reactivity.
+### `useWasmFromGitHub(githubRepo, options)`
 
-**Parameters:**
-- `wasmPath` (string|Ref<string>): Path to the .wasm file
-- `options` (object|Ref<object>, optional): Loading options
+Hook for loading WASM modules from GitHub.
 
-**Returns:**
+```jsx
+import { useWasmFromGitHub } from 'gowm/hooks/useWasm';
+
+function MyComponent() {
+  const { wasm, loading, error } = useWasmFromGitHub('org/repo', {
+    branch: 'main',
+    name: 'myModule'
+  });
+}
+```
+
+### `useMultipleWasmFromGitHub(githubRepos, options)`
+
+Hook for loading multiple WASM modules from GitHub.
+
+```jsx
+import { useMultipleWasmFromGitHub } from 'gowm/hooks/useWasm';
+
+function MyComponent() {
+  const { modules, loading, errors, reload } = useMultipleWasmFromGitHub([
+    { name: 'math', repo: 'org/math-wasm' },
+    { name: 'image', repo: 'org/image-wasm', branch: 'dev' }
+  ]);
+}
+```
+
+## 🖖 Vue 3 Composables
+
+### `useWasm(wasmPath, options)`
+
+Composable for loading local WASM modules.
+
+```vue
+<script>
+import { useWasm } from 'gowm/composables/useWasm';
+
+export default {
+  setup() {
+    const { wasm, loading, error, reload } = useWasm('./my-module.wasm');
+    return { wasm, loading, error, reload };
+  }
+}
+</script>
+```
+
+### `useWasmFromGitHub(githubRepo, options)`
+
+Composable for loading WASM modules from GitHub.
+
+```vue
+<script>
+import { useWasmFromGitHub } from 'gowm/composables/useWasm';
+
+export default {
+  setup() {
+    const { wasm, loading, error } = useWasmFromGitHub('org/repo', {
+      tag: 'v1.0.0'
+    });
+    return { wasm, loading, error };
+  }
+}
+</script>
+```
+
+### `useMultipleWasm(modules)`
+
+Composable for loading multiple WASM modules.
+
+```vue
+<script>
+import { useMultipleWasm } from 'gowm/composables/useWasm';
+
+export default {
+  setup() {
+    const { modules, loading, errors } = useMultipleWasm([
+      { name: 'local', path: './local.wasm' },
+      { name: 'github', github: 'org/repo' }
+    ]);
+    return { modules, loading, errors };
+  }
+}
+</script>
+```
+
+## 🌐 Browser Usage
+
+For browser environments, use the ES6 module version:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="module">
+        import { loadFromGitHub } from './node_modules/gowm/src/browser.js';
+        
+        async function init() {
+            const wasm = await loadFromGitHub('org/wasm-module');
+            const result = wasm.call('myFunction', 42);
+            console.log(result);
+        }
+        
+        init();
+    </script>
+</head>
+<body>
+    <h1>GoWM Browser Example</h1>
+</body>
+</html>
+```
+
+## 🔄 Migration from Deprecated Features
+
+### NPM Package Loading (Deprecated)
+
+**⚠️ IMPORTANT:** NPM package loading is deprecated and will be removed in future versions. Please migrate to GitHub repository loading for better reliability and performance.
+
+**Old way (deprecated):**
 ```javascript
-{
-  wasm: Ref<WasmBridge | null>,
-  loading: Ref<boolean>,
-  error: Ref<Error | null>,
-  reload: () => void
-}
+// ❌ Deprecated - will be removed
+const math = await loadFromNPM('my-wasm-package');
 ```
 
-#### useWasmFromGitHub(githubRepo, options)
-
-Vue 3 composable for loading a WASM module from GitHub.
-
-**Parameters:**
-- `githubRepo` (string|Ref<string>): GitHub repository
-- `options` (object|Ref<object>, optional): GitHub loading options
-
-**Returns:** Same interface as `useWasm`
-
-#### useMultipleWasm(modules)
-
-Vue 3 composable for loading multiple WASM modules.
-
-**Parameters:**
-- `modules` (Array|Ref<Array>): Array of module configurations
-
-**Configuration object:**
+**New way (recommended):**
 ```javascript
-{
-  name: string,           // Required: Module name
-  path?: string,          // Optional: Local file path
-  github?: string,        // Optional: GitHub repository
-  options?: LoadOptions   // Optional: Loading options
-}
+// ✅ Recommended approach
+const math = await loadFromGitHub('myorg/my-wasm-package');
 ```
 
-#### useMultipleWasmFromGitHub(githubRepos)
+### Migration Benefits
 
-Vue 3 composable for loading multiple WASM modules from GitHub repositories.
+- **Better reliability**: Direct access to source repositories
+- **Version control**: Use specific branches, tags, or commits
+- **Faster loading**: No NPM registry overhead
+- **Always up-to-date**: Access latest releases immediately
+- **Better caching**: Browser and CDN optimization
 
-**Parameters:**
-- `githubRepos` (Array|Ref<Array>): Array of GitHub repository configurations
+## 📊 Examples
 
-**Configuration object:**
-```javascript
-{
-  name: string,                    // Required: Module name
-  repo: string,                    // Required: GitHub repository
-  branch?: string,                 // Optional: Git branch
-  tag?: string,                    // Optional: Git tag
-  path?: string,                   // Optional: Path in repository
-  filename?: string,               // Optional: Specific filename
-  options?: GitHubLoadOptions      // Optional: Additional options
-}
-```
+Check out the `/examples` directory for comprehensive examples:
 
-**Returns:**
-```javascript
-{
-  modules: Ref<Record<string, WasmBridge>>,
-  loading: Ref<boolean>,                    // Global loading state
-  errors: Ref<Record<string, Error>>,       // Errors by module
-  reload: () => void
-}
-```
-
-### React Hooks
-
-#### useWasm(wasmPath, options)
-
-React hook for loading and using a WASM module.
-
-**Parameters:**
-- `wasmPath` (string): Path to the .wasm file
-- `options` (object, optional): Loading options
-
-**Returns:**
-```javascript
-{
-  wasm: WasmBridge | null,
-  loading: boolean,
-  error: Error | null
-}
-```
-
-#### useWasmFromGitHub(githubRepo, options)
-
-React hook for loading a WASM module from GitHub.
-
-**Parameters:**
-- `githubRepo` (string): GitHub repository
-- `options` (object, optional): GitHub loading options
-
-**Returns:** Same interface as `useWasm`
-
-#### useMultipleWasmFromGitHub(githubRepos, options)
-
-React hook for loading multiple WASM modules from GitHub repositories.
-
-**Parameters:**
-- `githubRepos` (Array): Array of GitHub repository configurations
-- `options` (object, optional): Global loading options
-
-**Returns:**
-```javascript
-{
-  modules: Record<string, WasmBridge>,
-  loading: boolean,
-  errors: Record<string, Error>,
-  reload: () => void
-}
-```
-
-## 🔧 Go Integration
-
-### Basic Go Function Export
-
-```go
-package main
-
-import (
-    "syscall/js"
-)
-
-func add(this js.Value, p []js.Value) interface{} {
-    if len(p) != 2 {
-        return js.ValueOf("Error: two arguments required")
-    }
-    
-    a := p[0].Float()
-    b := p[1].Float()
-    return js.ValueOf(a + b)
-}
-
-func multiply(this js.Value, p []js.Value) interface{} {
-    if len(p) != 2 {
-        return js.ValueOf("Error: two arguments required")
-    }
-    
-    a := p[0].Float()
-    b := p[1].Float()
-    return js.ValueOf(a * b)
-}
-
-func main() {
-    c := make(chan struct{}, 0)
-    
-    // Export functions to JavaScript
-    js.Global().Set("add", js.FuncOf(add))
-    js.Global().Set("multiply", js.FuncOf(multiply))
-    
-    // Signal readiness
-    js.Global().Set("__gowm_ready", js.ValueOf(true))
-    
-    <-c
-}
-```
-
-### Building and Publishing WASM
-
-```bash
-# Build WASM
-GOOS=js GOARCH=wasm go build -o main.wasm main.go
-
-# Create GitHub repository structure
-mkdir my-wasm-lib
-cd my-wasm-lib
-cp main.wasm .
-cp $(go env GOROOT)/misc/wasm/wasm_exec.js .
-
-# Push to GitHub
-git init
-git add .
-git commit -m "Initial WASM module"
-git remote add origin https://github.com/username/my-wasm-lib.git
-git push -u origin main
-
-# Create a release (optional)
-git tag v1.0.0
-git push --tags
-```
-
-## 📁 Project Structure
-
-```
-examples/
-├── math-wasm/           # Go math library example
-├── image-wasm/          # Image processing example
-├── basic-usage.js       # Basic Node.js usage
-├── advanced-usage.js    # Advanced features demo
-├── github-usage.js      # GitHub loading examples
-├── react-calculator.jsx # React example
-├── vue-calculator.vue   # Vue.js example
-└── browser-demo.html    # Browser demo
-
-src/
-├── index.js            # Main entry point
-├── loader.js           # WASM module loader
-├── bridge.js           # WASM-JavaScript bridge
-├── browser.js          # Browser-specific code
-└── loader-browser.js   # Browser loader
-
-composables/
-└── useWasm.js          # Vue 3 composables
-
-hooks/
-└── useWasm.js          # React hooks
-
-types/
-└── index.d.ts          # TypeScript definitions
-```
-
-## 🧪 Testing
-
-```bash
-# Run all tests
-npm test
-
-# Run specific tests
-npm run test:basic
-npm run test:advanced
-npm run test:wasm
-npm run test:image
-
-# Test GitHub loading
-node examples/github-usage.js
-
-# Build examples
-npm run build:examples
-
-# Start browser demo
-npm run demo:browser
-```
-
-## ⚡ Performance Tips
-
-- Use `preInit: true` for better performance (default)
-- Reuse module instances when possible
-- Clean up modules when done: `bridge.cleanup()`
-- Monitor memory usage with `getTotalMemoryUsage()`
-- Use specific branches/tags for stable versions
-- Cache GitHub repositories locally when possible
-
-## 🛠️ TypeScript Support
-
-GoWM includes comprehensive TypeScript definitions:
-
-- `LoadOptions`: Module loading options
-- `GitHubLoadOptions`: GitHub-specific loading options
-- `WasmBridge`: Main bridge interface
-- `ModuleStats`: Statistics interface
-- `UseWasmResult`: Hook return types
-- `VueWasmResult`: Composable return types
-- `GitHubRepoConfig`: GitHub repository configuration
-
-### Error Handling
-
-```javascript
-try {
-  const math = await loadFromGitHub('myorg/wasm-math');
-  const result = math.call('add', 5, 3);
-} catch (error) {
-  console.error('WASM call error:', error.message);
-}
-```
-
-## 🔄 Migration from NPM
-
-The NPM loading system is now deprecated in favor of GitHub loading:
-
-```javascript
-// ❌ Old (deprecated)
-const math = await loadFromNPM('my-wasm-math');
-
-// ✅ New (recommended)
-const math = await loadFromGitHub('myorg/wasm-math');
-```
-
-### Benefits of GitHub Loading
-
-- ✅ **Direct repository access** - No NPM publishing required
-- ✅ **Branch and tag support** - Use specific versions
-- ✅ **Custom file paths** - Flexible repository structure
-- ✅ **Release asset support** - Load from GitHub releases
-- ✅ **Automatic file discovery** - Smart filename detection
-- ✅ **Version control integration** - Direct Git integration
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
+- **Node.js examples**: Basic and advanced usage
+- **React examples**: Complete React applications
+- **Vue examples**: Vue 3 application templates
+- **Browser examples**: Vanilla JavaScript implementations
+- **Framework examples**: Integration with popular frameworks
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read our contributing guidelines and submit pull requests.
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Development Setup
+
+```bash
+git clone https://github.com/benoitpetit/gowm.git
+cd gowm
+npm install
+npm test
+```
+
+## 📄 License
+
+MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🔗 Links
 
-- [GitHub Repository](https://github.com/benoitpetit/gowm)
 - [NPM Package](https://www.npmjs.com/package/gowm)
-- [Go WebAssembly Documentation](https://github.com/golang/go/wiki/WebAssembly)
+- [GitHub Repository](https://github.com/benoitpetit/gowm)
+- [Documentation](https://github.com/benoitpetit/gowm/blob/main/README.md)
+- [Examples](https://github.com/benoitpetit/gowm/tree/main/examples)
+
+---
+
+<div align="center">
+  <p>Made with ❤️ by <a href="https://github.com/benoitpetit">@devbyben</a></p>
+  <p>⭐ Star us on GitHub if this project helped you!</p>
+</div>

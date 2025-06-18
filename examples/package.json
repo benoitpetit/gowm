@@ -1,0 +1,28 @@
+{
+  "name": "gowm-examples",
+  "version": "1.0.0",
+  "description": "Clean examples for GoWM - Go WebAssembly Manager",
+  "private": true,
+  "scripts": {
+    "node:basic": "node node/basic.js",
+    "node:crypto": "node node/crypto.js",
+    "browser:serve": "npx serve browser/",
+    "test:node": "npm run node:basic && npm run node:crypto"
+  },
+  "keywords": [
+    "webassembly",
+    "wasm",
+    "go",
+    "examples",
+    "gowm"
+  ],
+  "author": "benoitpetit",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "vue": ">=3.0.0"
+  },
+  "devDependencies": {
+    "serve": "^14.0.0"
+  }
+} 

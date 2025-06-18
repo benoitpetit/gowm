@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoWM Browser Example - QR Generator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #374151;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .loading {
+            color: #f59e0b;
+            font-weight: 500;
+        }
+        .error {
+            color: #ef4444;
+            background: #fef2f2;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #059669;
+            background: #f0fdf4;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .result {
+            margin-top: 30px;
+            text-align: center;
+        }
+        .qr-image {
+            max-width: 300px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 GoWM QR Generator</h1>
+        <p class="subtitle">Generate QR codes using Go WebAssembly</p>
+
+        <div class="input-group">
+            <label for="text">Text to encode:</label>
+            <input type="text" id="text" placeholder="Enter text or URL..." value="https://github.com/benoitpetit/gowm">
+        </div>
+
+        <div class="input-group">
+            <label for="size">QR Code Size:</label>
+            <select id="size">
+                <option value="200">200x200</option>
+                <option value="300" selected>300x300</option>
+                <option value="400">400x400</option>
+                <option value="500">500x500</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label for="level">Error Correction:</label>
+            <select id="level">
+                <option value="LOW">Low</option>
+                <option value="MEDIUM" selected>Medium</option>
+                <option value="HIGH">High</option>
+                <option value="HIGHEST">Highest</option>
+            </select>
+        </div>
+
+        <button onclick="generateQR()" id="generateBtn">Generate QR Code</button>
+        <button onclick="downloadQR()" id="downloadBtn" style="display: none;">Download</button>
+
+        <div id="status"></div>
+        <div id="result" class="result"></div>
+    </div>
+
+    <script type="module">
+        import { loadFromGitHub } from '../src/browser.js';
+
+        let qrModule = null;
+        let currentQRData = null;
+
+        // Initialize QR module on page load
+        async function initQRModule() {
+            try {
+                showStatus('Loading QR WASM module...', 'loading');
+                
+                qrModule = await loadFromGitHub('benoitpetit/wasm-projects', {
+                    path: 'qr-wasm',
+                    filename: 'main.wasm',
+                    name: 'qr'
+                });
+
+                qrModule.call('setSilentMode', true);
+                showStatus('✅ QR module ready!', 'success');
+                document.getElementById('generateBtn').disabled = false;
+                
+            } catch (error) {
+                showStatus(`❌ Failed to load QR module: ${error.message}`, 'error');
+                console.error('QR module error:', error);
+            }
+        }
+
+        // Generate QR code
+        window.generateQR = async function() {
+            if (!qrModule) {
+                showStatus('QR module not loaded', 'error');
+                return;
+            }
+
+            const text = document.getElementById('text').value.trim();
+            const size = parseInt(document.getElementById('size').value);
+            const level = document.getElementById('level').value;
+
+            if (!text) {
+                showStatus('Please enter text to encode', 'error');
+                return;
+            }
+
+            try {
+                showStatus('Generating QR code...', 'loading');
+                
+                const result = qrModule.call('generateQRCode', text, size, level);
+                
+                if (result.error) {
+                    showStatus(`QR generation failed: ${result.error}`, 'error');
+                    return;
+                }
+
+                // Display QR code
+                const resultDiv = document.getElementById('result');
+                resultDiv.innerHTML = `
+                    <h3>Generated QR Code</h3>
+                    <img src="data:image/png;base64,${result.base64Image}" 
+                         alt="QR Code" class="qr-image">
+                    <p><strong>Size:</strong> ${result.width}x${result.height}</p>
+                    <p><strong>Error Correction:</strong> ${level}</p>
+                `;
+
+                currentQRData = result.base64Image;
+                document.getElementById('downloadBtn').style.display = 'inline-block';
+                showStatus('✅ QR code generated successfully!', 'success');
+
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+                console.error('QR generation error:', error);
+            }
+        };
+
+        // Download QR code
+        window.downloadQR = function() {
+            if (!currentQRData) return;
+
+            const link = document.createElement('a');
+            link.download = 'qrcode.png';
+            link.href = 'data:image/png;base64,' + currentQRData;
+            link.click();
+        };
+
+        // Show status message
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        // Initialize on page load
+        document.getElementById('generateBtn').disabled = true;
+        initQRModule();
+    </script>
+</body>
+</html> 
