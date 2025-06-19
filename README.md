@@ -1,9 +1,9 @@
-# GoWM - Go WebAssembly Manager
+# GoWM - Go Wasm Manager
 
 <div align="center">
   <img src="./logo.png" alt="GoWM Logo" width="200" />
 
-  <p><strong>GoWM</strong> simplifies the integration of Go WebAssembly modules into your JavaScript projects with support for GitHub repositories, React hooks, and Vue composables.</p>
+  <p><strong>GoWM</strong> simplifies the integration of Go Wasm modules into your JavaScript projects</br> with seamless GitHub repository support, React hooks, and Vue composables.</p>
 
   <p>
     <a href="https://www.npmjs.com/package/gowm"><img src="https://img.shields.io/npm/v/gowm.svg" alt="npm version"></a>
@@ -24,7 +24,6 @@
 - 🧹 **Memory Management** - Automatic resource cleanup and memory management
 - 📊 **Module Statistics** - Built-in monitoring and performance metrics
 - 🔄 **Flexible Calls** - Both synchronous and asynchronous function calls
-- 🎯 **Multiple APIs** - Singleton API and class-based approach
 
 ## 📥 Installation
 
@@ -38,37 +37,38 @@ pnpm add gowm
 
 ## 🚀 Quick Start
 
-### Basic Usage (Node.js)
+### Node.js Example
 
 ```javascript
 const { load, loadFromGitHub } = require('gowm');
 
 async function example() {
   try {
-    // Load from local file
-    const localWasm = await load('./math.wasm', { name: 'math' });
-    
-    // Load directly from GitHub repository
-    const githubWasm = await loadFromGitHub('awesome-org/wasm-math', { 
-      name: 'github-math',
-      branch: 'main' 
+    // Load from GitHub repository (recommended)
+    const math = await loadFromGitHub('benoitpetit/wasm-modules-repository', { 
+      name: 'math',
+      path: 'math-wasm',
+      branch: 'master'
     });
     
+    // Load from local file
+    const localWasm = await load('./math.wasm', { name: 'local-math' });
+    
     // Call functions
-    const result = localWasm.call('add', 5, 3);
+    const result = math.call('add', 5, 3);
     console.log('5 + 3 =', result); // 8
     
     // Async calls
-    const asyncResult = await githubWasm.callAsync('multiply', 4, 7);
+    const asyncResult = await math.callAsync('multiply', 4, 7);
     console.log('4 * 7 =', asyncResult); // 28
     
     // Check available functions
-    if (localWasm.hasFunction('subtract')) {
-      console.log('subtract function is available');
+    if (math.hasFunction('divide')) {
+      console.log('divide function is available');
     }
     
     // Get module statistics
-    const stats = localWasm.getStats();
+    const stats = math.getStats();
     console.log('Available functions:', stats.functions);
     
   } catch (error) {
@@ -85,11 +85,13 @@ example();
 import React, { useState } from 'react';
 import { useWasmFromGitHub } from 'gowm/hooks/useWasm';
 
-function CalculatorComponent() {
-  const { wasm, loading, error } = useWasmFromGitHub('myorg/wasm-calculator', {
-    branch: 'stable',
+function Calculator() {
+  const { wasm, loading, error } = useWasmFromGitHub('benoitpetit/wasm-modules-repository', {
+    path: 'math-wasm',
+    branch: 'master',
     name: 'calculator'
   });
+  
   const [result, setResult] = useState(null);
 
   const calculate = async () => {
@@ -103,7 +105,7 @@ function CalculatorComponent() {
     }
   };
 
-  if (loading) return <div>Loading WASM module from GitHub...</div>;
+  if (loading) return <div>Loading WASM module...</div>;
   if (error) return <div>Error: {error.message}</div>;
 
   return (
@@ -120,7 +122,7 @@ function CalculatorComponent() {
 ```vue
 <template>
   <div class="calculator">
-    <div v-if="loading">Loading WASM module from GitHub...</div>
+    <div v-if="loading">Loading WASM module...</div>
     <div v-else-if="error" class="error">Error: {{ error.message }}</div>
     <div v-else>
       <input v-model.number="num1" type="number" placeholder="First number" />
@@ -136,11 +138,11 @@ import { ref } from 'vue';
 import { useWasmFromGitHub } from 'gowm/composables/useWasm';
 
 export default {
-  name: 'CalculatorComponent',
+  name: 'Calculator',
   setup() {
-    const { wasm, loading, error } = useWasmFromGitHub('company/math-wasm', {
-      tag: 'v2.0.0',
-      path: 'dist',
+    const { wasm, loading, error } = useWasmFromGitHub('benoitpetit/wasm-modules-repository', {
+      path: 'math-wasm',
+      branch: 'master',
       name: 'math'
     });
     
@@ -172,34 +174,35 @@ GoWM excels at loading WASM modules directly from GitHub repositories with intel
 const { loadFromGitHub } = require('gowm');
 
 async function examples() {
-  // Basic loading - automatic file discovery
-    const math = await loadFromGitHub('awesome-org/wasm-math');
+  // Basic loading with automatic file discovery
+  const math = await loadFromGitHub('benoitpetit/wasm-modules-repository', {
+    path: 'math-wasm',
+    branch: 'master'
+  });
     
   // Advanced loading with specific options
-    const imageProcessor = await loadFromGitHub('image-corp/wasm-image', {
-      branch: 'develop',        // Use develop branch
-      path: 'dist',            // Look in dist folder
-      filename: 'image.wasm',  // Specific filename
-      name: 'image-processor'  // Module name
-    });
+  const crypto = await loadFromGitHub('benoitpetit/wasm-modules-repository', {
+    path: 'crypto-wasm',
+    filename: 'main.wasm',
+    branch: 'master',
+    name: 'crypto-processor'
+  });
     
-    // Load from specific tag/release
-    const stableVersion = await loadFromGitHub('company/wasm-lib', {
-      tag: 'v1.2.0',           // Use specific tag
-      name: 'stable'
-    });
-    
-    // Load from full GitHub URL
-    const fromUrl = await loadFromGitHub(
-      'https://github.com/org/repo', 
-      { filename: 'module.wasm' }
-    );
+  // Load from full GitHub URL
+  const image = await loadFromGitHub(
+    'https://github.com/benoitpetit/wasm-modules-repository', 
+    { 
+      path: 'image-wasm',
+      filename: 'main.wasm', 
+      branch: 'master' 
+    }
+  );
 }
 ```
 
 ### Automatic File Discovery
 
-GoWM automatically searches for WASM files in common locations:
+GoWM automatically searches for WASM files in these locations:
 
 - **Root directory**: `main.wasm`, `index.wasm`, `{repo-name}.wasm`
 - **Common folders**: `wasm/`, `dist/`, `build/`
@@ -210,6 +213,23 @@ GoWM automatically searches for WASM files in common locations:
 
 ### Core Functions
 
+#### `loadFromGitHub(githubRepo, options)`
+
+Loads a WASM module from a GitHub repository with automatic file resolution.
+
+**Parameters:**
+- `githubRepo` (string): GitHub repository ("owner/repo" or full GitHub URL)
+- `options` (object, optional):
+  - `name` (string): Module identifier (default: repository name)
+  - `branch` (string): Git branch (default: 'master')
+  - `tag` (string): Git tag (takes precedence over branch)
+  - `path` (string): Path within repository (default: '')
+  - `filename` (string): Specific filename (default: auto-detect)
+  - `goRuntimePath` (string): Custom path to wasm_exec.js
+  - `preInit` (boolean): Pre-initialize the module (default: true)
+
+**Returns:** Promise<WasmBridge>
+
 #### `load(wasmPath, options)`
 
 Loads a WASM module from a local file or URL.
@@ -218,23 +238,6 @@ Loads a WASM module from a local file or URL.
 - `wasmPath` (string): Path to the .wasm file or URL
 - `options` (object, optional):
   - `name` (string): Module identifier (default: 'default')
-  - `goRuntimePath` (string): Custom path to wasm_exec.js
-  - `preInit` (boolean): Pre-initialize the module (default: true)
-
-**Returns:** Promise<WasmBridge>
-
-#### `loadFromGitHub(githubRepo, options)`
-
-Loads a WASM module from a GitHub repository with automatic file resolution.
-
-**Parameters:**
-- `githubRepo` (string): GitHub repository ("owner/repo" or full GitHub URL)
-- `options` (object, optional):
-  - `name` (string): Module name (default: repository name)
-  - `branch` (string): Git branch (default: 'main')
-  - `tag` (string): Git tag (takes precedence over branch)
-  - `path` (string): Path within repository (default: '')
-  - `filename` (string): Specific filename (default: auto-detect)
   - `goRuntimePath` (string): Custom path to wasm_exec.js
   - `preInit` (boolean): Pre-initialize the module (default: true)
 
@@ -290,7 +293,7 @@ Gets a list of all available functions in the module.
 
 Gets module statistics and information.
 
-**Returns:** Object with statistics
+**Returns:** Object with module statistics
 
 #### `cleanup()`
 
@@ -327,14 +330,15 @@ function MyComponent() {
 
 ### `useWasmFromGitHub(githubRepo, options)`
 
-Hook for loading WASM modules from GitHub.
+Hook for loading WASM modules from GitHub repositories.
 
 ```jsx
 import { useWasmFromGitHub } from 'gowm/hooks/useWasm';
 
 function MyComponent() {
-  const { wasm, loading, error } = useWasmFromGitHub('org/repo', {
-    branch: 'main',
+  const { wasm, loading, error } = useWasmFromGitHub('benoitpetit/wasm-modules-repository', {
+    path: 'math-wasm',
+    branch: 'master',
     name: 'myModule'
   });
 }
@@ -342,15 +346,15 @@ function MyComponent() {
 
 ### `useMultipleWasmFromGitHub(githubRepos, options)`
 
-Hook for loading multiple WASM modules from GitHub.
+Hook for loading multiple WASM modules from GitHub repositories.
 
 ```jsx
 import { useMultipleWasmFromGitHub } from 'gowm/hooks/useWasm';
 
 function MyComponent() {
   const { modules, loading, errors, reload } = useMultipleWasmFromGitHub([
-    { name: 'math', repo: 'org/math-wasm' },
-    { name: 'image', repo: 'org/image-wasm', branch: 'dev' }
+    { name: 'math', repo: 'benoitpetit/wasm-modules-repository', path: 'math-wasm' },
+    { name: 'crypto', repo: 'benoitpetit/wasm-modules-repository', path: 'crypto-wasm', branch: 'master' }
   ]);
 }
 ```
@@ -376,7 +380,7 @@ export default {
 
 ### `useWasmFromGitHub(githubRepo, options)`
 
-Composable for loading WASM modules from GitHub.
+Composable for loading WASM modules from GitHub repositories.
 
 ```vue
 <script>
@@ -384,8 +388,9 @@ import { useWasmFromGitHub } from 'gowm/composables/useWasm';
 
 export default {
   setup() {
-    const { wasm, loading, error } = useWasmFromGitHub('org/repo', {
-      tag: 'v1.0.0'
+    const { wasm, loading, error } = useWasmFromGitHub('benoitpetit/wasm-modules-repository', {
+      path: 'math-wasm',
+      branch: 'master'
     });
     return { wasm, loading, error };
   }
@@ -405,7 +410,7 @@ export default {
   setup() {
     const { modules, loading, errors } = useMultipleWasm([
       { name: 'local', path: './local.wasm' },
-      { name: 'github', github: 'org/repo' }
+      { name: 'github', github: 'benoitpetit/wasm-modules-repository', path: 'math-wasm' }
     ]);
     return { modules, loading, errors };
   }
@@ -425,9 +430,12 @@ For browser environments, use the ES6 module version:
         import { loadFromGitHub } from './node_modules/gowm/src/browser.js';
         
         async function init() {
-            const wasm = await loadFromGitHub('org/wasm-module');
-            const result = wasm.call('myFunction', 42);
-            console.log(result);
+            const wasm = await loadFromGitHub('benoitpetit/wasm-modules-repository', {
+              path: 'math-wasm',
+              branch: 'master'
+            });
+            const result = wasm.call('add', 21, 21);
+            console.log('21 + 21 =', result); // 42
         }
         
         init();
@@ -439,54 +447,14 @@ For browser environments, use the ES6 module version:
 </html>
 ```
 
-## 🔄 Migration from Deprecated Features
-
-### NPM Package Loading (Deprecated)
-
-**⚠️ IMPORTANT:** NPM package loading is deprecated and will be removed in future versions. Please migrate to GitHub repository loading for better reliability and performance.
-
-**Old way (deprecated):**
-```javascript
-// ❌ Deprecated - will be removed
-const math = await loadFromNPM('my-wasm-package');
-```
-
-**New way (recommended):**
-```javascript
-// ✅ Recommended approach
-const math = await loadFromGitHub('myorg/my-wasm-package');
-```
-
-### Migration Benefits
-
-- **Better reliability**: Direct access to source repositories
-- **Version control**: Use specific branches, tags, or commits
-- **Faster loading**: No NPM registry overhead
-- **Always up-to-date**: Access latest releases immediately
-- **Better caching**: Browser and CDN optimization
-
 ## 📊 Examples
 
 Check out the `/examples` directory for comprehensive examples:
 
-- **Node.js examples**: Basic and advanced usage
-- **React examples**: Complete React applications
-- **Vue examples**: Vue 3 application templates
+- **Node.js examples**: Basic and advanced usage patterns
+- **React examples**: Complete React applications with hooks
+- **Vue examples**: Vue 3 application templates with composables
 - **Browser examples**: Vanilla JavaScript implementations
-- **Framework examples**: Integration with popular frameworks
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Development Setup
-
-```bash
-git clone https://github.com/benoitpetit/gowm.git
-cd gowm
-npm install
-npm test
-```
 
 ## 📄 License
 

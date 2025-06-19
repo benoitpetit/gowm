@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <h1 class="title">🖼️ GoWM Image Processor</h1>
-    <p class="subtitle">Vue 3 + Go WebAssembly Image Processing</p>
+    <p class="subtitle">Vue 3 + Go Wasm Image Processing</p>
     
     <div v-if="loading" class="loading">
       <div class="spinner"></div>
@@ -107,10 +107,11 @@ export default {
   name: 'ImageProcessor',
   setup() {
     // WASM module loading
-    const { wasm, loading, error } = useWasmFromGitHub('benoitpetit/wasm-projects', {
+    const { wasm, loading, error } = useWasmFromGitHub('benoitpetit/wasm-modules-repository', {
       path: 'image-wasm',
       filename: 'main.wasm',
-      name: 'image'
+      name: 'image',
+      branch: 'master'
     });
 
     // Component state

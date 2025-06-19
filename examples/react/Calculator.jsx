@@ -1,7 +1,7 @@
 /**
  * React Calculator Component using GoWM
  * 
- * Demonstrates React hooks integration with Go WebAssembly
+ * Demonstrates React hooks integration with Go Wasm
  * math module for real-time calculations.
  */
 
@@ -15,10 +15,11 @@ const Calculator = () => {
     const [result, setResult] = useState(null);
 
     // Load math WASM module from GitHub
-    const { wasm, loading, error } = useWasmFromGitHub('benoitpetit/wasm-projects', {
+    const { wasm, loading, error } = useWasmFromGitHub('benoitpetit/wasm-modules-repository', {
         path: 'math-wasm',
         filename: 'main.wasm',
-        name: 'math'
+        name: 'math',
+        branch: 'master'
     });
 
     // Perform calculation
@@ -76,7 +77,7 @@ const Calculator = () => {
     return (
         <div style={styles.container}>
             <h1 style={styles.title}>🧮 GoWM Calculator</h1>
-            <p style={styles.subtitle}>React + Go WebAssembly Math Module</p>
+            <p style={styles.subtitle}>React + Go Wasm Math Module</p>
             
             <div style={styles.calculator}>
                 <div style={styles.inputGroup}>

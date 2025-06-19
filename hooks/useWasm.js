@@ -1,7 +1,7 @@
 /**
  * GoWM React Hooks
  * 
- * React hooks for loading and managing Go WebAssembly modules.
+ * React hooks for loading and managing Go Wasm modules.
  * Provides reactive state management for WASM modules with automatic cleanup.
  * 
  * @author devbyben

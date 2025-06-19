@@ -92,7 +92,7 @@
 <body>
     <div class="container">
         <h1>🔗 GoWM QR Generator</h1>
-        <p class="subtitle">Generate QR codes using Go WebAssembly</p>
+        <p class="subtitle">Generate QR codes using Go Wasm</p>
 
         <div class="input-group">
             <label for="text">Text to encode:</label>
@@ -137,10 +137,11 @@
             try {
                 showStatus('Loading QR WASM module...', 'loading');
                 
-                qrModule = await loadFromGitHub('benoitpetit/wasm-projects', {
+                qrModule = await loadFromGitHub('benoitpetit/wasm-modules-repository', {
                     path: 'qr-wasm',
                     filename: 'main.wasm',
-                    name: 'qr'
+                    name: 'qr',
+                    branch: 'master'
                 });
 
                 qrModule.call('setSilentMode', true);

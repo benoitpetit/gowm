@@ -1,8 +1,8 @@
 /**
- * GoWM - Go WebAssembly Manager TypeScript Definitions
+ * GoWM - Go Wasm Manager TypeScript Definitions
  * 
  * Comprehensive TypeScript definitions for GoWM package.
- * Provides type safety for loading and managing Go WebAssembly modules.
+ * Provides type safety for loading and managing Go Wasm modules.
  * 
  * @author devbyben
  * @license MIT
@@ -159,7 +159,7 @@ export declare class WasmLoader {
     loadModule(wasmPath: string, options?: LoadOptions): Promise<WasmModule>;
 
     /**
-     * Load the Go WebAssembly runtime
+     * Load the Go Wasm runtime
      * @param customPath - Custom path to wasm_exec.js
      */
     loadGoRuntime(customPath?: string): Promise<void>;

@@ -1,7 +1,7 @@
 {
     "name": "gowm",
     "version": "1.0.7",
-    "description": "Go WebAssembly Manager - Simplify integration of Go WebAssembly modules in your JavaScript projects with GitHub repository support, React hooks, and Vue composables",
+    "description": "Go Wasm Manager - Simplify integration of Go Wasm modules in your JavaScript projects with GitHub repository support, React hooks, and Vue composables",
     "main": "src/index.js",
     "browser": "src/browser.js",
     "module": "src/browser.js",

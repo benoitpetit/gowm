@@ -1,7 +1,7 @@
 {
   "name": "gowm-examples",
   "version": "1.0.0",
-  "description": "Clean examples for GoWM - Go WebAssembly Manager",
+  "description": "Clean examples for GoWM - Go Wasm Manager",
   "private": true,
   "scripts": {
     "node:basic": "node node/basic.js",

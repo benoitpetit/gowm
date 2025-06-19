@@ -1,7 +1,7 @@
 /**
  * Basic GoWM Example - Math WASM Module
  * 
- * Demonstrates loading and using a Go WebAssembly module
+ * Demonstrates loading and using a Go Wasm module
  * from GitHub repository for mathematical operations.
  */
 
@@ -11,10 +11,11 @@ async function main() {
     try {
         // Load math WASM module from GitHub repository
         console.log('Loading math WASM module...');
-        const math = await loadFromGitHub('benoitpetit/wasm-projects', {
+        const math = await loadFromGitHub('benoitpetit/wasm-modules-repository', {
             path: 'math-wasm',
             filename: 'main.wasm',
-            name: 'math'
+            name: 'math',
+            branch: 'master'
         });
 
         console.log('✅ Math module loaded successfully\n');

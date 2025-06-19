@@ -1,7 +1,7 @@
 /**
  * GoWM Vue Composables
  * 
- * Vue 3 composables for loading and managing Go WebAssembly modules.
+ * Vue 3 composables for loading and managing Go Wasm modules.
  * Provides reactive state management for WASM modules with automatic cleanup.
  * 
  * @author devbyben

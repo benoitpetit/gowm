@@ -2,7 +2,7 @@
  * Crypto GoWM Example - Crypto WASM Module
  * 
  * Demonstrates cryptographic operations using
- * Go WebAssembly module from GitHub repository.
+ * Go Wasm module from GitHub repository.
  */
 
 const { loadFromGitHub } = require('gowm');
@@ -11,10 +11,11 @@ async function main() {
     try {
         // Load crypto WASM module from GitHub repository
         console.log('Loading crypto WASM module...');
-        const crypto = await loadFromGitHub('benoitpetit/wasm-projects', {
+        const crypto = await loadFromGitHub('benoitpetit/wasm-modules-repository', {
             path: 'crypto-wasm',
             filename: 'main.wasm',
-            name: 'crypto'
+            name: 'crypto',
+            branch: 'master'
         });
 
         console.log('✅ Crypto module loaded successfully\n');

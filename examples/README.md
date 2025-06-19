@@ -1,6 +1,6 @@
 # 📚 GoWM Examples
 
-Clean, simple examples demonstrating GoWM integration with Go WebAssembly modules from the [wasm-projects](https://github.com/benoitpetit/wasm-projects) repository.
+Clean, simple examples demonstrating GoWM integration with Go Wasm modules from the [wasm-modules-repository](https://github.com/benoitpetit/wasm-modules-repository) repository.
 
 ## 🗂️ Structure
 
@@ -104,7 +104,7 @@ Vue 3 component with Composition API:
 
 ## 🔧 WASM Modules Used
 
-All examples use modules from [wasm-projects](https://github.com/benoitpetit/wasm-projects):
+All examples use modules from [wasm-modules-repository](https://github.com/benoitpetit/wasm-modules-repository):
 
 | Module | Repository Path | Functions |
 |--------|----------------|-----------|
@@ -118,10 +118,11 @@ All examples use modules from [wasm-projects](https://github.com/benoitpetit/was
 ### GitHub Loading
 All examples use `loadFromGitHub()` to load WASM modules directly from repositories:
 ```javascript
-const wasm = await loadFromGitHub('benoitpetit/wasm-projects', {
+const wasm = await loadFromGitHub('benoitpetit/wasm-modules-repository', {
     path: 'math-wasm',
     filename: 'main.wasm',
-    name: 'math'
+    name: 'math',
+    branch: 'master'
 });
 ```
 
