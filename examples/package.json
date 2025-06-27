@@ -1,22 +1,28 @@
 {
   "name": "gowm-examples",
-  "version": "1.0.0",
-  "description": "Clean examples for GoWM - Go Wasm Manager",
+  "version": "2.0.0",
+  "description": "Complete examples for GoWM - Go Wasm Manager with React and Vue",
   "private": true,
   "scripts": {
     "node:basic": "node node/basic.js",
     "node:crypto": "node node/crypto.js",
-    "browser:serve": "npx serve browser/",
-    "test:node": "npm run node:basic && npm run node:crypto"
+    "node:text": "node node/text.js",
+    "node:all": "npm run node:basic && npm run node:crypto && npm run node:text",
+    "browser:serve": "node browser/serve.js",
+    "browser:serve-npx": "npx serve browser/"
   },
   "keywords": [
     "webassembly",
     "wasm",
     "go",
     "examples",
-    "gowm"
+    "gowm",
+    "react",
+    "vue",
+    "hooks",
+    "composables"
   ],
-  "author": "benoitpetit",
+  "author": "devbyben",
   "license": "MIT",
   "peerDependencies": {
     "react": ">=16.8.0",
@@ -25,4 +31,4 @@
   "devDependencies": {
     "serve": "^14.0.0"
   }
-} 
+}

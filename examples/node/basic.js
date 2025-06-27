@@ -5,7 +5,7 @@
  * from GitHub repository for mathematical operations.
  */
 
-const { loadFromGitHub } = require('gowm');
+const { loadFromGitHub } = require('../../src/index.js');
 
 async function main() {
     try {
@@ -38,8 +38,10 @@ async function main() {
         // Error handling example
         console.log('\n=== Error Handling ===');
         const divisionResult = math.call('divide', 10, 0);
-        if (typeof divisionResult === 'string' && divisionResult.includes('Erreur')) {
+        if (typeof divisionResult === 'string' && divisionResult.includes('Error')) {
             console.log('Division by zero handled:', divisionResult);
+        } else {
+            console.log('Unexpected result for division by zero:', divisionResult);
         }
 
         // Get available functions
@@ -52,7 +54,14 @@ async function main() {
         const stats = math.getStats();
         console.log('Module name:', stats.name);
         console.log('Ready:', stats.ready);
-        console.log('Function count:', stats.functions.length);
+        
+        // Show actual module functions count (not all global functions)
+        const moduleFunctions = math.call('getAvailableFunctions');
+        if (moduleFunctions && Array.isArray(moduleFunctions)) {
+            console.log('Module functions:', moduleFunctions.length);
+        } else {
+            console.log('Function count (all global):', stats.functions.length);
+        }
 
     } catch (error) {
         console.error('❌ Error:', error.message);

@@ -1,11 +1,11 @@
 /**
- * Crypto GoWM Example - Crypto WASM Module
+ * Crypto GoWM Example - Cryptography WASM Module
  * 
- * Demonstrates cryptographic operations using
- * Go Wasm module from GitHub repository.
+ * Demonstrates loading and using a Go Wasm module
+ * for cryptographic operations from GitHub repository.
  */
 
-const { loadFromGitHub } = require('gowm');
+const { loadFromGitHub } = require('../../src/index.js');
 
 async function main() {
     try {
@@ -74,7 +74,15 @@ async function main() {
         console.log('\n=== Module Info ===');
         const stats = crypto.getStats();
         console.log('Module name:', stats.name);
-        console.log('Available functions:', stats.functions.length);
+        
+        // Get the actual WASM module functions (not all global functions)
+        const moduleFunctions = crypto.call('getAvailableFunctions');
+        if (moduleFunctions && Array.isArray(moduleFunctions)) {
+            console.log('Module functions:', moduleFunctions.length);
+            console.log('Functions:', moduleFunctions);
+        } else {
+            console.log('Available functions (all global):', stats.functions.length);
+        }
 
     } catch (error) {
         console.error('❌ Error:', error.message);

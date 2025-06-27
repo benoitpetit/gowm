@@ -1,54 +1,245 @@
-# GoWM Source Architecture
+# GoWM Source Code Structure
 
-## Loader Files
+This directory contains the unified GoWM source code with a clean, organized structure.
 
-### `loader.js` (Principal)
-- **Role**: Main WASM loader used by `index.js`
-- **Features**: 
-  - Support for local files and HTTP URLs
-  - Node.js and browser compatibility
-  - Automatic node-fetch import for HTTP requests in Node.js
-  - Module caching and cleanup
-- **Usage**: Used by default in `index.js`
+## 📁 Directory Structure
 
-### `loader-browser.js` (Spécialisé)
-- **Role**: Browser-specific optimized loader
-- **Features**:
-  - Lightweight version for browser environments
-  - No Node.js dependencies
-  - Optimized for web bundlers
-- **Usage**: Can be used for browser-only builds
+```
+src/
+├── core/                    # Core GoWM implementation
+│   └── gowm.js             # Main GoWM class
+├── loaders/                 # Unified loader system
+│   └── unified-loader.js   # Handles file, HTTP, and GitHub loading
+├── bridges/                 # Unified bridge system
+│   └── unified-bridge.js   # WASM-JavaScript interface
+├── legacy/                  # Legacy files (for reference)
+│   ├── loader.js           # Original Node.js loader
+│   ├── loader-browser.js   # Original browser loader
+│   ├── loader-safe.js      # Original safe loader
+│   ├── bridge.js           # Original Node.js bridge
+│   └── bridge-browser.js   # Original browser bridge
+├── index.js                # Main entry point (CommonJS)
+├── browser.js              # Browser-specific entry point
+└── README.md               # This file
+```
 
-### `loader-safe.js` (Alternative)
-- **Role**: Enhanced version with additional error handling
-- **Features**:
-  - Dynamic require loading to avoid bundling issues
-  - Enhanced error checking and fallbacks
-  - Better compatibility with various build systems
-- **Usage**: Alternative for environments with strict security or bundling requirements
+## 🚀 Key Features
 
-## Core Files
+### Unified Loader System
+- **Single loader** that handles all source types:
+  - Local files (Node.js only)
+  - HTTP/HTTPS URLs
+  - GitHub repositories
+- **Auto-detection** of source type
+- **Fallback strategies** for GitHub repos
+- **Cross-platform compatibility**
 
-### `index.js`
-- Main GoWM class with GitHub loading capabilities
-- Uses `loader.js` by default
+### Unified Bridge System
+- **Enhanced memory management**
+- **Multiple data type support**
+- **Callback registration**
+- **Comprehensive testing utilities**
+- **Detailed statistics and monitoring**
 
-### `bridge.js` & `bridge-browser.js`
-- WASM instance wrapper and Go communication bridge
-- Browser-specific optimizations in `bridge-browser.js`
+### Backward Compatibility
+- All existing APIs remain functional
+- Legacy class names are still available
+- Existing code will continue to work without changes
 
-### `browser.js`
-- Browser-specific utilities and optimizations
+## 📖 Usage Examples
 
----
+### Basic Loading
+```javascript
+const gowm = require('gowm');
 
-## File Usage
+// Auto-detect source type
+await gowm.load('path/to/module.wasm');           // Local file
+await gowm.load('https://example.com/module.wasm'); // HTTP URL
+await gowm.load('owner/repo');                     // GitHub repo
+```
 
-**Active files (used by package):**
-- `index.js` ← imports `loader.js`
-- `loader.js` (main)
-- `loader-browser.js` (browser builds)
-- `bridge.js` / `bridge-browser.js`
+### Specific Loading Methods
+```javascript
+// Local file (Node.js only)
+await gowm.loadFromFile('./module.wasm');
 
-**Optional files:**
-- `loader-safe.js` (alternative implementation) 
+// HTTP URL
+await gowm.loadFromUrl('https://example.com/module.wasm');
+
+// GitHub repository
+await gowm.loadFromGitHub('owner/repo', {
+    branch: 'main',
+    path: 'dist',
+    filename: 'module.wasm'
+});
+```
+
+### Advanced Usage
+```javascript
+const { GoWM, UnifiedWasmLoader, UnifiedWasmBridge } = require('gowm');
+
+// Create custom instance
+const customGoWM = new GoWM();
+
+// Use loader directly
+const loader = new UnifiedWasmLoader();
+const module = await loader.loadModule('owner/repo');
+
+// Use bridge directly
+const bridge = new UnifiedWasmBridge(module);
+```
+
+## 🔧 Configuration Options
+
+### Loading Options
+- `name`: Module name (string)
+- `branch`: Git branch for GitHub (string)
+- `tag`: Git tag for GitHub (string)
+- `path`: Path within repository (string)
+- `filename`: Specific filename (string)
+- `preInit`: Pre-initialize module (boolean, default: true)
+- `timeout`: Initialization timeout (number, default: 15000ms)
+- `goRuntimePath`: Custom Go runtime path (string)
+
+### Example with Options
+```javascript
+await gowm.loadFromGitHub('owner/repo', {
+    name: 'my-module',
+    branch: 'develop',
+    path: 'build',
+    filename: 'custom.wasm',
+    timeout: 30000
+});
+```
+
+## 📊 Statistics and Monitoring
+
+### Get System Statistics
+```javascript
+const stats = gowm.getStats();
+console.log('Total modules:', stats.totalModules);
+console.log('Memory usage:', stats.totalMemoryUsage);
+console.log('Environment:', stats.environment);
+```
+
+### Test All Modules
+```javascript
+const testResults = gowm.testAll();
+console.log('Test results:', testResults);
+```
+
+### Memory Usage
+```javascript
+const memoryUsage = gowm.getTotalMemoryUsage();
+console.log('Total memory:', memoryUsage, 'bytes');
+```
+
+## 🌐 Browser Usage
+
+### ES6 Modules
+```javascript
+import gowm from 'gowm/src/browser.js';
+
+await gowm.loadFromGitHub('owner/repo');
+```
+
+### Global Usage
+```html
+<script src="path/to/gowm/src/browser.js"></script>
+<script>
+    GoWM.loadFromUrl('https://example.com/module.wasm');
+</script>
+```
+
+## 🔄 Migration from Legacy System
+
+The unified system is fully backward compatible. No changes are required for existing code:
+
+```javascript
+// These continue to work as before
+const gowm = require('gowm');
+await gowm.load('module.wasm');
+const bridge = gowm.get();
+```
+
+### Legacy Class Access
+```javascript
+// Still available for backward compatibility
+const { WasmLoader, WasmBridge } = require('gowm');
+// These are aliases to UnifiedWasmLoader and UnifiedWasmBridge
+```
+
+## 🛠️ Development
+
+### Adding New Source Types
+To add a new source type to the unified loader:
+
+1. Add detection method to `UnifiedWasmLoader`
+2. Add loading method for the source type
+3. Update `loadWasmBytes` method to handle the new type
+
+### Extending Bridge Functionality
+To extend the bridge functionality:
+
+1. Add new methods to `UnifiedWasmBridge`
+2. Update statistics collection
+3. Add tests to the `test()` method
+
+## 📋 API Reference
+
+### Main Methods
+- `load(source, options)` - Load from any source
+- `loadFromFile(path, options)` - Load from local file
+- `loadFromUrl(url, options)` - Load from HTTP URL
+- `loadFromGitHub(repo, options)` - Load from GitHub
+- `get(name)` - Get loaded module bridge
+- `unload(name)` - Unload module
+- `unloadAll()` - Unload all modules
+- `listModules()` - List loaded modules
+- `getStats()` - Get system statistics
+- `testAll()` - Test all modules
+
+### Utility Methods
+- `isLoaded(name)` - Check if module is loaded
+- `getTotalMemoryUsage()` - Get total memory usage
+- `getHelp()` - Get help information
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+1. **Module not found in GitHub repo**
+   - Check if the repo has WASM files
+   - Try specifying exact path and filename
+   - Check branch/tag name
+
+2. **Memory allocation errors**
+   - Check if WASM module has malloc/free functions
+   - Verify buffer size limits
+   - Monitor memory usage with `getStats()`
+
+3. **Browser compatibility**
+   - Ensure fetch API is available
+   - Check CORS policy for external URLs
+   - Use browser.js entry point for browser environments
+
+### Debug Information
+Enable debug logging by checking module statistics:
+```javascript
+const stats = gowm.getStats();
+console.log('Debug info:', JSON.stringify(stats, null, 2));
+```
+
+## 📜 Version History
+
+- **v1.1.0**: Loader and bridge system
+- **v1.x**: Legacy separate loader system (moved to `/legacy/`)
+
+## 🤝 Contributing
+
+When contributing to the unified system:
+
+1. Maintain backward compatibility
+2. Add comprehensive tests
+3. Update documentation
+4. Follow the unified architecture pattern

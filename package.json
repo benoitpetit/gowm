@@ -1,7 +1,7 @@
 {
     "name": "gowm",
-    "version": "1.0.8",
-    "description": "Go Wasm Manager - Simplify integration of Go Wasm modules in your JavaScript projects with GitHub repository support, React hooks, and Vue composables",
+    "version": "1.1.0",
+    "description": "Go Wasm Manager - Loader system for Go WebAssembly modules with GitHub repository support. Features intelligent auto-detection and enhanced memory management.",
     "main": "src/index.js",
     "browser": "src/browser.js",
     "module": "src/browser.js",
@@ -12,15 +12,11 @@
             "browser": "./src/browser.js",
             "import": "./src/browser.js",
             "require": "./src/index.js"
-        },
-        "./hooks": "./hooks/useWasm.js",
-        "./composables": "./composables/useWasm.js"
+        }
     },
     "files": [
         "src/",
         "types/",
-        "hooks/",
-        "composables/",
         "runtime/",
         "README.md",
         "LICENSE"
@@ -29,6 +25,9 @@
         "test": "node examples/node/basic.js",
         "test:basic": "node examples/node/basic.js",
         "test:crypto": "node examples/node/crypto.js",
+        "test:node": "node test-quick.js",
+        "test:examples": "node test-examples.js",
+        "test:all": "npm run test:examples",
         "check": "node check-project.js",
         "demo:serve": "npx serve examples/browser -p 3000",
         "demo:browser": "npm run demo:serve && echo 'Open http://localhost:3000'",
@@ -42,14 +41,14 @@
         "golang",
         "javascript",
         "nodejs",
-        "react",
-        "vue",
-        "vuejs",
         "github",
         "bridge",
         "loader",
         "manager",
-        "typescript"
+        "typescript",
+        "auto-detection",
+        "memory-management",
+        "cross-platform"
     ],
     "author": "devbyben",
     "license": "MIT",

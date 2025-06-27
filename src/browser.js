@@ -8,77 +8,94 @@
  * @license MIT
  */
 
-// Import core GoWM functionality
-import { GoWM } from './index.js';
+// Browser-specific implementation using unified system
+(function (global) {
+    'use strict';
 
-/**
- * GoWM class for browser environments
- * Extends the base GoWM functionality with browser-specific optimizations
- */
-class BrowserGoWM extends GoWM {
-    constructor() {
-        super();
-        // Browser-specific initialization
-        this.isBrowser = true;
+    // Check if we're in a module system (CommonJS) or browser global
+    const isModule = typeof module !== 'undefined' && module.exports;
+    const isES6 = typeof window !== 'undefined' && typeof window.GoWM === 'undefined';
+
+    // Import classes - adapt based on environment
+    let GoWM, UnifiedWasmLoader, UnifiedWasmBridge;
+
+    if (isModule) {
+        // CommonJS environment (Node.js with browser bundle)
+        GoWM = require('./core/gowm');
+        UnifiedWasmLoader = require('./loaders/unified-loader');
+        UnifiedWasmBridge = require('./bridges/unified-bridge');
+    } else {
+        // Browser global environment - classes should be available
+        GoWM = global.GoWM;
+        UnifiedWasmLoader = global.UnifiedWasmLoader;
+        UnifiedWasmBridge = global.UnifiedWasmBridge;
     }
 
-    /**
-     * Legacy NPM loading method for browsers
-     * @deprecated This method is deprecated and will be removed in future versions. Use loadFromGitHub instead.
-     * @param {string} packageName - NPM package name
-     * @param {Object} [options={}] - Loading options
-     * @returns {Promise<WasmBridge>} Promise that resolves to a WasmBridge instance
-     * @throws {Error} If package loading fails or is not supported in browser
-     */
-    async loadFromNPM(packageName, options = {}) {
-        console.warn('⚠️  WARNING: loadFromNPM is deprecated and will be removed in a future version. Use loadFromGitHub instead for better reliability and performance.');
-        console.warn('⚠️  NOTE: NPM loading in browser environments is not recommended. Consider using loadFromGitHub instead.');
-        
-        // In browser environments, NPM loading is not directly supported
-        // This method is kept for compatibility but will throw an error
-        throw new Error('NPM loading is not supported in browser environments. Please use loadFromGitHub instead.');
+    // Create main instance for browser
+    const gowm = new GoWM();
+
+    // Browser-specific optimizations
+    gowm.isBrowser = true;
+
+    // Override loadFromFile to throw error in browser
+    const originalLoadFromFile = gowm.loadFromFile;
+    gowm.loadFromFile = function (filePath, options = {}) {
+        throw new Error('loadFromFile is not available in browser environment. Use loadFromUrl or loadFromGitHub instead.');
+    };
+
+    // Export object
+    const GoWMBrowser = {
+        // Main instance
+        default: gowm,
+
+        // Classes
+        GoWM,
+        UnifiedWasmLoader,
+        UnifiedWasmBridge,
+
+        // Legacy class exports for backward compatibility
+        WasmLoader: UnifiedWasmLoader,
+        WasmBridge: UnifiedWasmBridge,
+
+        // Convenience methods bound to instance
+        load: gowm.load.bind(gowm),
+        loadFromGitHub: gowm.loadFromGitHub.bind(gowm),
+        loadFromUrl: gowm.loadFromUrl.bind(gowm),
+        get: gowm.get.bind(gowm),
+        unload: gowm.unload.bind(gowm),
+        unloadAll: gowm.unloadAll.bind(gowm),
+        listModules: gowm.listModules.bind(gowm),
+        getStats: gowm.getStats.bind(gowm),
+        isLoaded: gowm.isLoaded.bind(gowm),
+        getTotalMemoryUsage: gowm.getTotalMemoryUsage.bind(gowm),
+        testAll: gowm.testAll.bind(gowm),
+        getHelp: gowm.getHelp.bind(gowm),
+
+        // Version info
+        version: '1.1.0-browser',
+
+        // Create new instance
+        create: () => new GoWM()
+    };
+
+    // Export based on environment
+    if (isModule) {
+        // CommonJS export
+        module.exports = GoWMBrowser;
+    } else {
+        // Browser global registration
+        global.GoWM = gowm;
+        global.WasmLoader = UnifiedWasmLoader;
+        global.WasmBridge = UnifiedWasmBridge;
+        global.GoWMBrowser = GoWMBrowser;
+
+        // Also support ES6 imports if available
+        if (typeof window !== 'undefined' && typeof window.define === 'function' && window.define.amd) {
+            // AMD support
+            window.define('gowm', [], function () {
+                return GoWMBrowser;
+            });
+        }
     }
-}
 
-// Create singleton instance for browser usage
-const gowm = new BrowserGoWM();
-
-/**
- * ES6 module exports for browser environments
- * Provides both named exports and default export for maximum compatibility
- */
-
-// Core class export
-export { BrowserGoWM as GoWM };
-
-// Primary API functions
-export const load = (wasmPath, options) => gowm.load(wasmPath, options);
-export const get = (name) => gowm.get(name);
-export const loadFromGitHub = (githubRepo, options) => gowm.loadFromGitHub(githubRepo, options);
-
-// Deprecated functions (kept for backward compatibility)
-/** @deprecated Use loadFromGitHub instead */
-export const loadFromNPM = (packageName, options) => gowm.loadFromNPM(packageName, options);
-
-// Utility functions
-export const unload = (name) => gowm.unload(name);
-export const listModules = () => gowm.listModules();
-export const getStats = () => gowm.getStats();
-export const unloadAll = () => gowm.unloadAll();
-export const isLoaded = (name) => gowm.isLoaded(name);
-export const getTotalMemoryUsage = () => gowm.getTotalMemoryUsage();
-
-// Default export for convenience
-export default {
-    GoWM: BrowserGoWM,
-    load,
-    get,
-    loadFromGitHub,
-    loadFromNPM, // Deprecated
-    unload,
-    listModules,
-    getStats,
-    unloadAll,
-    isLoaded,
-    getTotalMemoryUsage
-};
+})(typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : this);

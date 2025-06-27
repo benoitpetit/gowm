@@ -126,9 +126,12 @@
         <div id="result" class="result"></div>
     </div>
 
-    <script type="module">
-        import { loadFromGitHub } from '../src/browser.js';
+    <!-- Include GoWM runtime dependencies -->
+    <script src="../../runtime/wasm_exec.js"></script>
+    <script src="../../src/loaders/unified-loader.js"></script>
+    <script src="../../src/bridges/unified-bridge.js"></script>
 
+    <script>
         let qrModule = null;
         let currentQRData = null;
 
@@ -136,31 +139,56 @@
         async function initQRModule() {
             try {
                 showStatus('Loading QR WASM module...', 'loading');
+                console.log('Starting QR module initialization...');
                 
-                qrModule = await loadFromGitHub('benoitpetit/wasm-modules-repository', {
-                    path: 'qr-wasm',
-                    filename: 'main.wasm',
+                // Use unified loader directly
+                const loader = new UnifiedWasmLoader();
+                console.log('UnifiedWasmLoader created:', loader);
+                
+                console.log('Loading from GitHub...');
+                const wasmModule = await loader.loadModule('https://raw.githubusercontent.com/benoitpetit/wasm-modules-repository/master/qr-wasm/main.wasm', {
                     name: 'qr',
-                    branch: 'master'
+                    preInit: true // This will instantiate and run the Go runtime
                 });
+                console.log('WASM module loaded and instantiated:', wasmModule);
 
-                qrModule.call('setSilentMode', true);
+                // Create bridge
+                qrModule = new UnifiedWasmBridge(wasmModule, { name: 'qr' });
+                console.log('Bridge created:', qrModule);
+
+                // Wait a bit for Go runtime to fully initialize its exports
+                console.log('Waiting for Go exports to be available...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // List all available global functions for debugging
+                const availableFunctions = Object.getOwnPropertyNames(globalThis)
+                    .filter(name => typeof globalThis[name] === 'function')
+                    .filter(name => !name.startsWith('_') && !['initQRModule', 'generateQR', 'downloadQR', 'showStatus'].includes(name));
+                
+                console.log('Available WASM functions:', availableFunctions);
+
+                // Check if the QR function is available
+                if (typeof globalThis.generateQRCode === 'function') {
+                    console.log('✅ generateQRCode function found!');
+                } else if (typeof globalThis.GenerateQRCode === 'function') {
+                    console.log('✅ GenerateQRCode function found!');
+                } else {
+                    console.log('⚠️ QR function not found, available functions:', availableFunctions);
+                    // Continue anyway, maybe the function has a different name
+                }
+
                 showStatus('✅ QR module ready!', 'success');
                 document.getElementById('generateBtn').disabled = false;
                 
             } catch (error) {
                 showStatus(`❌ Failed to load QR module: ${error.message}`, 'error');
                 console.error('QR module error:', error);
+                console.error('Error stack:', error.stack);
             }
         }
 
         // Generate QR code
         window.generateQR = async function() {
-            if (!qrModule) {
-                showStatus('QR module not loaded', 'error');
-                return;
-            }
-
             const text = document.getElementById('text').value.trim();
             const size = parseInt(document.getElementById('size').value);
             const level = document.getElementById('level').value;
@@ -170,13 +198,29 @@
                 return;
             }
 
+            // Check if QR function is available
+            if (typeof globalThis.generateQRCode !== 'function') {
+                showStatus('QR module not loaded', 'error');
+                return;
+            }
+
             try {
                 showStatus('Generating QR code...', 'loading');
                 
-                const result = qrModule.call('generateQRCode', text, size, level);
+                console.log(`Calling generateQRCode with: "${text}", ${size}, "${level}"`);
+                
+                // Call the global QR function directly
+                const result = globalThis.generateQRCode(text, size, level);
+                
+                console.log('QR Generation result:', result);
                 
                 if (result.error) {
                     showStatus(`QR generation failed: ${result.error}`, 'error');
+                    return;
+                }
+
+                if (!result.base64Image) {
+                    showStatus('QR generation failed: No image data returned', 'error');
                     return;
                 }
 
@@ -186,8 +230,8 @@
                     <h3>Generated QR Code</h3>
                     <img src="data:image/png;base64,${result.base64Image}" 
                          alt="QR Code" class="qr-image">
-                    <p><strong>Size:</strong> ${result.width}x${result.height}</p>
-                    <p><strong>Error Correction:</strong> ${level}</p>
+                    <p><strong>Size:</strong> ${result.size}x${result.size}</p>
+                    <p><strong>Error Correction:</strong> ${result.errorLevel}</p>
                 `;
 
                 currentQRData = result.base64Image;
@@ -217,8 +261,11 @@
         }
 
         // Initialize on page load
-        document.getElementById('generateBtn').disabled = true;
-        initQRModule();
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('generateBtn').disabled = true;
+            // Wait a bit for all scripts to load
+            setTimeout(initQRModule, 100);
+        });
     </script>
 </body>
 </html> 

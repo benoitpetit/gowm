@@ -14,16 +14,20 @@
 
 ## ✨ Features
 
-- 🚀 **Unified Interface** - Load Go WASM modules from local files or GitHub repositories
+- 🚀 **Loader System** - Intelligent loader for all source types (files, URLs, GitHub)
 - 🔧 **Cross-Platform** - Full support for Node.js and browser environments
-- ⚛️ **React Integration** - Built-in hooks (`useWasm`, `useWasmFromGitHub`)
-- 🖖 **Vue 3 Support** - Reactive composables with automatic cleanup
+- 🎯 **Auto-Detection** - Automatically detects source type and optimal loading strategy
 - 📦 **GitHub Direct Loading** - Load WASM modules directly from GitHub repositories
 - 🏷️ **Version Control** - Support for branches, tags, and specific commits
-- 🛡️ **Error Handling** - Robust error handling and automatic retries
-- 🧹 **Memory Management** - Automatic resource cleanup and memory management
-- 📊 **Module Statistics** - Built-in monitoring and performance metrics
-- 🔄 **Flexible Calls** - Both synchronous and asynchronous function calls
+- 🛡️ **Enhanced Error Handling** - Robust error handling with fallback strategies
+- 🧹 **Smart Memory Management** - Advanced memory management and resource cleanup
+- 📊 **Comprehensive Statistics** - Built-in monitoring, testing, and performance metrics
+- 🔄 **Flexible API** - Both synchronous and asynchronous function calls
+- 📝 **TypeScript Support** - Full TypeScript definitions included
+
+### 🚀 Coming in v1.1.1
+- ⚛️ **React Hooks** - useWasm hooks for seamless React integration
+- 🖖 **Vue 3 Composables** - useWasm composables for Vue.js applications
 
 ## 📥 Installation
 
@@ -37,10 +41,12 @@ pnpm add gowm
 
 ## 🚀 Quick Start
 
+> **Note**: React hooks and Vue composables will be available in GoWM v1.1.1. Current version (1.1.0) provides core functionality only.
+
 ### Node.js Example
 
 ```javascript
-const { load, loadFromGitHub } = require('gowm');
+const { load, loadFromGitHub, loadFromUrl } = require('gowm');
 
 async function example() {
   try {
@@ -51,8 +57,16 @@ async function example() {
       branch: 'master'
     });
     
+    // Load from HTTP URL
+    const remoteWasm = await loadFromUrl('https://example.com/module.wasm');
+    
     // Load from local file
     const localWasm = await load('./math.wasm', { name: 'local-math' });
+    
+    // Auto-detection: GoWM automatically detects the source type
+    const autoDetected1 = await load('owner/repo');                     // GitHub
+    const autoDetected2 = await load('https://example.com/mod.wasm');   // HTTP
+    const autoDetected3 = await load('./local.wasm');                   // File
     
     // Call functions
     const result = math.call('add', 5, 3);
@@ -67,9 +81,14 @@ async function example() {
       console.log('divide function is available');
     }
     
-    // Get module statistics
+    // Get comprehensive statistics
     const stats = math.getStats();
     console.log('Available functions:', stats.functions);
+    console.log('Memory usage:', stats.memoryUsage);
+    
+    // Test module functionality
+    const testResults = math.test();
+    console.log('Module test results:', testResults);
     
   } catch (error) {
     console.error('Error:', error);
@@ -79,91 +98,29 @@ async function example() {
 example();
 ```
 
-### React Integration
+## 🔄 Loader System
 
-```jsx
-import React, { useState } from 'react';
-import { useWasmFromGitHub } from 'gowm/hooks/useWasm';
+GoWM v1.1.0 features a loader system that handles all source types with a single API:
 
-function Calculator() {
-  const { wasm, loading, error } = useWasmFromGitHub('benoitpetit/wasm-modules-repository', {
-    path: 'math-wasm',
-    branch: 'master',
-    name: 'calculator'
-  });
-  
-  const [result, setResult] = useState(null);
+### Auto-Detection
+```javascript
+const { load } = require('gowm');
 
-  const calculate = async () => {
-    if (wasm) {
-      try {
-        const sum = await wasm.callAsync('add', 10, 20);
-        setResult(sum);
-      } catch (err) {
-        console.error('Calculation failed:', err);
-      }
-    }
-  };
-
-  if (loading) return <div>Loading WASM module...</div>;
-  if (error) return <div>Error: {error.message}</div>;
-
-  return (
-    <div>
-      <button onClick={calculate}>Calculate 10 + 20</button>
-      {result !== null && <p>Result: {result}</p>}
-    </div>
-  );
-}
+// Automatically detects source type
+await load('owner/repo');                        // → GitHub repository
+await load('https://example.com/module.wasm');   // → HTTP URL  
+await load('./local/module.wasm');               // → Local file
+await load('/absolute/path/module.wasm');        // → Absolute path
 ```
 
-### Vue 3 Integration
+### Specific Loading Methods
+```javascript
+const { loadFromFile, loadFromUrl, loadFromGitHub } = require('gowm');
 
-```vue
-<template>
-  <div class="calculator">
-    <div v-if="loading">Loading WASM module...</div>
-    <div v-else-if="error" class="error">Error: {{ error.message }}</div>
-    <div v-else>
-      <input v-model.number="num1" type="number" placeholder="First number" />
-      <input v-model.number="num2" type="number" placeholder="Second number" />
-      <button @click="calculate">Calculate {{ num1 }} + {{ num2 }}</button>
-      <div v-if="result !== null" class="result">Result: {{ result }}</div>
-    </div>
-  </div>
-</template>
-
-<script>
-import { ref } from 'vue';
-import { useWasmFromGitHub } from 'gowm/composables/useWasm';
-
-export default {
-  name: 'Calculator',
-  setup() {
-    const { wasm, loading, error } = useWasmFromGitHub('benoitpetit/wasm-modules-repository', {
-      path: 'math-wasm',
-      branch: 'master',
-      name: 'math'
-    });
-    
-    const num1 = ref(10);
-    const num2 = ref(20);
-    const result = ref(null);
-
-    const calculate = async () => {
-      if (wasm.value) {
-        try {
-          result.value = await wasm.value.callAsync('add', num1.value, num2.value);
-        } catch (err) {
-          console.error('Calculation error:', err);
-        }
-      }
-    };
-
-    return { wasm, loading, error, num1, num2, result, calculate };
-  }
-};
-</script>
+// Explicit methods for specific sources
+await loadFromFile('./module.wasm');             // Node.js only
+await loadFromUrl('https://example.com/mod.wasm'); // HTTP/HTTPS
+await loadFromGitHub('owner/repo', options);     // GitHub repository
 ```
 
 ## 🐙 GitHub Repository Loading
@@ -185,7 +142,8 @@ async function examples() {
     path: 'crypto-wasm',
     filename: 'main.wasm',
     branch: 'master',
-    name: 'crypto-processor'
+    name: 'crypto-processor',
+    timeout: 30000  // Custom timeout
   });
     
   // Load from full GitHub URL
@@ -213,6 +171,20 @@ GoWM automatically searches for WASM files in these locations:
 
 ### Core Functions
 
+#### `load(source, options)`
+
+Universal loading function that auto-detects source type.
+
+**Parameters:**
+- `source` (string): Can be file path, HTTP URL, or GitHub repo
+- `options` (object, optional):
+  - `name` (string): Module identifier
+  - `timeout` (number): Initialization timeout (default: 15000ms)
+  - `preInit` (boolean): Pre-initialize module (default: true)
+  - `goRuntimePath` (string): Custom path to wasm_exec.js
+
+**Returns:** Promise<WasmBridge>
+
 #### `loadFromGitHub(githubRepo, options)`
 
 Loads a WASM module from a GitHub repository with automatic file resolution.
@@ -221,25 +193,33 @@ Loads a WASM module from a GitHub repository with automatic file resolution.
 - `githubRepo` (string): GitHub repository ("owner/repo" or full GitHub URL)
 - `options` (object, optional):
   - `name` (string): Module identifier (default: repository name)
-  - `branch` (string): Git branch (default: 'master')
+  - `branch` (string): Git branch (default: 'main')
   - `tag` (string): Git tag (takes precedence over branch)
   - `path` (string): Path within repository (default: '')
   - `filename` (string): Specific filename (default: auto-detect)
+  - `timeout` (number): Initialization timeout (default: 15000ms)
   - `goRuntimePath` (string): Custom path to wasm_exec.js
   - `preInit` (boolean): Pre-initialize the module (default: true)
 
 **Returns:** Promise<WasmBridge>
 
-#### `load(wasmPath, options)`
+#### `loadFromUrl(url, options)`
 
-Loads a WASM module from a local file or URL.
+Loads a WASM module from HTTP/HTTPS URL.
 
 **Parameters:**
-- `wasmPath` (string): Path to the .wasm file or URL
-- `options` (object, optional):
-  - `name` (string): Module identifier (default: 'default')
-  - `goRuntimePath` (string): Custom path to wasm_exec.js
-  - `preInit` (boolean): Pre-initialize the module (default: true)
+- `url` (string): HTTP/HTTPS URL to WASM file
+- `options` (object, optional): Same as `load()` options
+
+**Returns:** Promise<WasmBridge>
+
+#### `loadFromFile(filePath, options)`
+
+Loads a WASM module from local file (Node.js only).
+
+**Parameters:**
+- `filePath` (string): Path to the .wasm file
+- `options` (object, optional): Same as `load()` options
 
 **Returns:** Promise<WasmBridge>
 
@@ -250,65 +230,80 @@ Retrieves an already loaded module by name.
 **Parameters:**
 - `name` (string, optional): Module name (default: 'default')
 
-**Returns:** WasmBridge | null
+**Returns:** UnifiedWasmBridge | null
 
-### WasmBridge Methods
+### Enhanced Bridge Methods
+
+The bridge provides comprehensive functionality:
 
 #### `call(funcName, ...args)`
 
 Calls a WASM function synchronously.
 
-**Parameters:**
-- `funcName` (string): Name of the function to call
-- `...args`: Function arguments
-
-**Returns:** Function result
-
 #### `callAsync(funcName, ...args)`
 
 Calls a WASM function asynchronously.
 
-**Parameters:**
-- `funcName` (string): Name of the function to call
-- `...args`: Function arguments
+#### `createBuffer(data)`
 
-**Returns:** Promise<Function result>
+Creates a buffer for data transfer with enhanced type support.
 
-#### `hasFunction(funcName)`
+**Supported Types:**
+- `Float64Array`, `Float32Array`
+- `Uint8Array`, `Uint16Array`, `Uint32Array`
+- `Int8Array`, `Int16Array`, `Int32Array`
+- `Array`, `string`
 
-Checks if a function exists in the WASM module.
+#### `test()`
 
-**Parameters:**
-- `funcName` (string): Function name to check
+Runs comprehensive tests on the module.
 
-**Returns:** boolean
-
-#### `getAvailableFunctions()`
-
-Gets a list of all available functions in the module.
-
-**Returns:** string[]
+**Returns:** Object with test results:
+```javascript
+{
+  functionCalls: boolean,
+  memoryAllocation: boolean,
+  callbacks: boolean,
+  asyncCalls: boolean,
+  errors: string[]
+}
+```
 
 #### `getStats()`
 
-Gets module statistics and information.
+Gets comprehensive module statistics.
 
-**Returns:** Object with module statistics
-
-#### `cleanup()`
-
-Manually clean up module resources.
-
-**Returns:** void
+**Returns:** Object with detailed statistics:
+```javascript
+{
+  name: string,
+  ready: boolean,
+  environment: 'Node.js' | 'Browser',
+  functions: string[],
+  callbacks: string[],
+  allocatedBuffers: number,
+  memoryUsage: {
+    total: number,
+    wasm: number,
+    go: number,
+    buffers: number,
+    buffersCount: number
+  },
+  supportedDataTypes: string[],
+  loadedAt: string
+}
+```
 
 ### Utility Functions
 
 - `listModules()`: List all loaded modules
-- `getStats()`: Get statistics for all modules
+- `getStats()`: Get statistics for all modules  
 - `unload(name)`: Unload a specific module
 - `unloadAll()`: Unload all modules
 - `isLoaded(name)`: Check if a module is loaded
 - `getTotalMemoryUsage()`: Get total memory usage
+- `testAll()`: Test all loaded modules
+- `getHelp()`: Get comprehensive help information
 
 ## ⚛️ React Hooks
 
@@ -420,7 +415,7 @@ export default {
 
 ## 🌐 Browser Usage
 
-For browser environments, use the ES6 module version:
+For browser environments, GoWM automatically optimizes for the browser:
 
 ```html
 <!DOCTYPE html>
@@ -447,6 +442,36 @@ For browser environments, use the ES6 module version:
 </html>
 ```
 
+### Global Usage
+```html
+<script src="path/to/gowm/src/browser.js"></script>
+<script>
+    GoWM.loadFromUrl('https://example.com/module.wasm');
+</script>
+```
+
+## 🏗️ Architecture
+
+GoWM v1.1.0 features a clean architecture:
+
+```
+src/
+├── core/gowm.js              # Main GoWM class
+├── loaders/loader.js         # Loading system  
+├── bridges/bridge.js         # Bridge interface
+├── legacy/                   # Legacy files (preserved)
+├── index.js                  # Main entry point
+└── browser.js                # Browser-optimized entry
+```
+
+### Key Improvements
+
+- **Single Loader**: One loader handles all source types
+- **Enhanced Bridge**: Advanced memory management and testing
+- **Better Performance**: Optimized loading and initialization
+- **Comprehensive Testing**: Built-in module testing capabilities
+- **Detailed Statistics**: In-depth monitoring and metrics
+
 ## 📊 Examples
 
 Check out the `/examples` directory for comprehensive examples:
@@ -455,6 +480,47 @@ Check out the `/examples` directory for comprehensive examples:
 - **React examples**: Complete React applications with hooks
 - **Vue examples**: Vue 3 application templates with composables
 - **Browser examples**: Vanilla JavaScript implementations
+
+### Running Examples
+
+```bash
+# Run basic Node.js example
+npm run test:basic
+
+# Run crypto example
+npm run test:crypto
+
+# Serve browser examples
+npm run demo:serve
+```
+
+## 🔧 Development
+
+### Testing Your Modules
+
+```javascript
+const gowm = require('gowm');
+
+// Load and test a module
+const module = await gowm.load('your-module.wasm');
+const testResults = module.test();
+console.log('Test results:', testResults);
+
+// Get comprehensive statistics
+const stats = gowm.getStats();
+console.log('System stats:', stats);
+```
+
+### Custom Loading
+
+```javascript
+const { WasmLoader, WasmBridge } = require('gowm');
+
+// Use components directly for advanced scenarios
+const loader = new WasmLoader();
+const module = await loader.loadModule('source');
+const bridge = new WasmBridge(module);
+```
 
 ## 📄 License
 
