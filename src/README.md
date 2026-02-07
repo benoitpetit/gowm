@@ -26,6 +26,7 @@ src/
 ## 🚀 Key Features
 
 ### Unified Loader System
+
 - **Single loader** that handles all source types:
   - Local files (Node.js only)
   - HTTP/HTTPS URLs
@@ -35,6 +36,7 @@ src/
 - **Cross-platform compatibility**
 
 ### Unified Bridge System
+
 - **Enhanced memory management**
 - **Multiple data type support**
 - **Callback registration**
@@ -42,6 +44,7 @@ src/
 - **Detailed statistics and monitoring**
 
 ### Backward Compatibility
+
 - All existing APIs remain functional
 - Legacy class names are still available
 - Existing code will continue to work without changes
@@ -49,41 +52,44 @@ src/
 ## 📖 Usage Examples
 
 ### Basic Loading
+
 ```javascript
-const gowm = require('gowm');
+const gowm = require("gowm");
 
 // Auto-detect source type
-await gowm.load('path/to/module.wasm');           // Local file
-await gowm.load('https://example.com/module.wasm'); // HTTP URL
-await gowm.load('owner/repo');                     // GitHub repo
+await gowm.load("path/to/module.wasm"); // Local file
+await gowm.load("https://example.com/module.wasm"); // HTTP URL
+await gowm.load("owner/repo"); // GitHub repo
 ```
 
 ### Specific Loading Methods
+
 ```javascript
 // Local file (Node.js only)
-await gowm.loadFromFile('./module.wasm');
+await gowm.loadFromFile("./module.wasm");
 
 // HTTP URL
-await gowm.loadFromUrl('https://example.com/module.wasm');
+await gowm.loadFromUrl("https://example.com/module.wasm");
 
 // GitHub repository
-await gowm.loadFromGitHub('owner/repo', {
-    branch: 'main',
-    path: 'dist',
-    filename: 'module.wasm'
+await gowm.loadFromGitHub("owner/repo", {
+  branch: "main",
+  path: "dist",
+  filename: "module.wasm",
 });
 ```
 
 ### Advanced Usage
+
 ```javascript
-const { GoWM, UnifiedWasmLoader, UnifiedWasmBridge } = require('gowm');
+const { GoWM, UnifiedWasmLoader, UnifiedWasmBridge } = require("gowm");
 
 // Create custom instance
 const customGoWM = new GoWM();
 
 // Use loader directly
 const loader = new UnifiedWasmLoader();
-const module = await loader.loadModule('owner/repo');
+const module = await loader.loadModule("owner/repo");
 
 // Use bridge directly
 const bridge = new UnifiedWasmBridge(module);
@@ -92,6 +98,7 @@ const bridge = new UnifiedWasmBridge(module);
 ## 🔧 Configuration Options
 
 ### Loading Options
+
 - `name`: Module name (string)
 - `branch`: Git branch for GitHub (string)
 - `tag`: Git tag for GitHub (string)
@@ -102,52 +109,58 @@ const bridge = new UnifiedWasmBridge(module);
 - `goRuntimePath`: Custom Go runtime path (string)
 
 ### Example with Options
+
 ```javascript
-await gowm.loadFromGitHub('owner/repo', {
-    name: 'my-module',
-    branch: 'develop',
-    path: 'build',
-    filename: 'custom.wasm',
-    timeout: 30000
+await gowm.loadFromGitHub("owner/repo", {
+  name: "my-module",
+  branch: "develop",
+  path: "build",
+  filename: "custom.wasm",
+  timeout: 30000,
 });
 ```
 
 ## 📊 Statistics and Monitoring
 
 ### Get System Statistics
+
 ```javascript
 const stats = gowm.getStats();
-console.log('Total modules:', stats.totalModules);
-console.log('Memory usage:', stats.totalMemoryUsage);
-console.log('Environment:', stats.environment);
+console.log("Total modules:", stats.totalModules);
+console.log("Memory usage:", stats.totalMemoryUsage);
+console.log("Environment:", stats.environment);
 ```
 
 ### Test All Modules
+
 ```javascript
 const testResults = gowm.testAll();
-console.log('Test results:', testResults);
+console.log("Test results:", testResults);
 ```
 
 ### Memory Usage
+
 ```javascript
 const memoryUsage = gowm.getTotalMemoryUsage();
-console.log('Total memory:', memoryUsage, 'bytes');
+console.log("Total memory:", memoryUsage, "bytes");
 ```
 
 ## 🌐 Browser Usage
 
 ### ES6 Modules
-```javascript
-import gowm from 'gowm/src/browser.js';
 
-await gowm.loadFromGitHub('owner/repo');
+```javascript
+import gowm from "gowm/src/browser.js";
+
+await gowm.loadFromGitHub("owner/repo");
 ```
 
 ### Global Usage
+
 ```html
 <script src="path/to/gowm/src/browser.js"></script>
 <script>
-    GoWM.loadFromUrl('https://example.com/module.wasm');
+  GoWM.loadFromUrl("https://example.com/module.wasm");
 </script>
 ```
 
@@ -157,21 +170,23 @@ The unified system is fully backward compatible. No changes are required for exi
 
 ```javascript
 // These continue to work as before
-const gowm = require('gowm');
-await gowm.load('module.wasm');
+const gowm = require("gowm");
+await gowm.load("module.wasm");
 const bridge = gowm.get();
 ```
 
 ### Legacy Class Access
+
 ```javascript
 // Still available for backward compatibility
-const { WasmLoader, WasmBridge } = require('gowm');
+const { WasmLoader, WasmBridge } = require("gowm");
 // These are aliases to UnifiedWasmLoader and UnifiedWasmBridge
 ```
 
 ## 🛠️ Development
 
 ### Adding New Source Types
+
 To add a new source type to the unified loader:
 
 1. Add detection method to `UnifiedWasmLoader`
@@ -179,6 +194,7 @@ To add a new source type to the unified loader:
 3. Update `loadWasmBytes` method to handle the new type
 
 ### Extending Bridge Functionality
+
 To extend the bridge functionality:
 
 1. Add new methods to `UnifiedWasmBridge`
@@ -188,6 +204,7 @@ To extend the bridge functionality:
 ## 📋 API Reference
 
 ### Main Methods
+
 - `load(source, options)` - Load from any source
 - `loadFromFile(path, options)` - Load from local file
 - `loadFromUrl(url, options)` - Load from HTTP URL
@@ -200,6 +217,7 @@ To extend the bridge functionality:
 - `testAll()` - Test all modules
 
 ### Utility Methods
+
 - `isLoaded(name)` - Check if module is loaded
 - `getTotalMemoryUsage()` - Get total memory usage
 - `getHelp()` - Get help information
@@ -224,10 +242,12 @@ To extend the bridge functionality:
    - Use browser.js entry point for browser environments
 
 ### Debug Information
+
 Enable debug logging by checking module statistics:
+
 ```javascript
 const stats = gowm.getStats();
-console.log('Debug info:', JSON.stringify(stats, null, 2));
+console.log("Debug info:", JSON.stringify(stats, null, 2));
 ```
 
 ## 📜 Version History
