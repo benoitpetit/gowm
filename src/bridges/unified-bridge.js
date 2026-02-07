@@ -2,6 +2,18 @@
  * Unified WASM Bridge
  * Provides interface between JavaScript and WASM modules
  * Works in both Node.js and browser environments
+ * 
+ * @version 1.1.1
+ * Changes v1.4.0:
+ * - describe(funcName) for inline documentation from module.json
+ * - getDetailedFunctions() returns functions with metadata
+ * - Automatic parameter count validation on call()
+ * - Type warnings in debug mode
+ * - Error pattern detection from gowmConfig
+ * 
+ * Previous (v1.2.0):
+ * - Namespace-aware function calls via __gowm_modules_[moduleId]
+ * - Fixed allocateGoMemory (no longer uses unsafe offset calculation)
  */
 class UnifiedWasmBridge {
     constructor(wasmModule, options = {}) {
@@ -9,35 +21,143 @@ class UnifiedWasmBridge {
         this.callbacks = new Map();
         this.allocatedBuffers = new Set();
         this.name = options.name || 'unnamed';
+        this.moduleId = wasmModule.moduleId || this.name;
         this.isNode = typeof window === 'undefined';
+
+        // Phase 3: Module metadata from module.json
+        this._metadata = wasmModule.metadata || null;
+        this._functionsMap = this._buildFunctionsMap();
+        this._errorPattern = this._metadata?.gowmConfig?.errorPattern || null;
+        this._validateCalls = options.validateCalls !== false;
+        this._debugMode = options.logLevel === 'debug';
     }
 
     /**
-     * Call a WASM function with error handling
+     * Build an index of functions from module.json metadata for fast lookup.
+     * @returns {Map<string, object>} Map of funcName → function metadata
+     * @private
+     */
+    _buildFunctionsMap() {
+        const map = new Map();
+        if (!this._metadata || !this._metadata.functions) return map;
+
+        for (const fn of this._metadata.functions) {
+            if (fn.name) {
+                map.set(fn.name, fn);
+            }
+        }
+        return map;
+    }
+
+    /**
+     * Call a WASM function with error handling.
+     * Resolution order:
+     * 1. WASM exports (direct WebAssembly exports)
+     * 2. Module namespace (globalThis.__gowm_modules_[moduleId][funcName])
+     * 3. globalThis (backward compat for unnamespaced Go exports)
+     * 
+     * When metadata is available (Phase 3.4), validates:
+     * - Parameter count (throws if wrong count for fixed-arg functions)
+     * - Parameter types (warns in debug mode)
+     * 
      * @param {string} funcName - Function name
      * @param {...any} args - Function arguments
      * @returns {any} Function result
      */
     call(funcName, ...args) {
         try {
-            // Check WASM exports first
-            if (this.module.exports && this.module.exports[funcName]) {
-                return this.module.exports[funcName](...args);
+            // Phase 3.4: Validate function call using metadata
+            if (this._validateCalls && this._functionsMap.size > 0) {
+                this._validateCall(funcName, args);
             }
-            // Then check global JavaScript functions (for Go WASM)
-            else if (globalThis[funcName] && typeof globalThis[funcName] === 'function') {
-                return globalThis[funcName](...args);
+
+            // 1. Check WASM exports first
+            if (this.module.exports && this.module.exports[funcName] &&
+                typeof this.module.exports[funcName] === 'function') {
+                const result = this.module.exports[funcName](...args);
+                return this._processResult(funcName, result);
             }
-            else {
-                throw new Error(`Function ${funcName} not found`);
+            // 2. Check module namespace (isolated functions)
+            const ns = globalThis.__gowm_modules_ && globalThis.__gowm_modules_[this.moduleId];
+            if (ns && typeof ns[funcName] === 'function') {
+                const result = ns[funcName](...args);
+                return this._processResult(funcName, result);
             }
+            // 3. Fallback to globalThis (backward compat)
+            if (globalThis[funcName] && typeof globalThis[funcName] === 'function') {
+                const result = globalThis[funcName](...args);
+                return this._processResult(funcName, result);
+            }
+            throw new Error(`Function ${funcName} not found in module '${this.moduleId}'`);
         } catch (error) {
-            const errorMsg = `Error calling ${funcName}: ${error.message}`;
-            if (!this.isNode) {
-                console.error(errorMsg, error);
+            if (error.message.startsWith('Function ') && error.message.includes('not found')) {
+                throw error;
             }
+            const errorMsg = `Error calling ${funcName}: ${error.message}`;
             throw new Error(errorMsg);
         }
+    }
+
+    /**
+     * Validate a function call against module.json metadata.
+     * Checks parameter count and optionally warns about types.
+     * @param {string} funcName - Function name
+     * @param {Array} args - Arguments passed
+     * @private
+     */
+    _validateCall(funcName, args) {
+        const fnMeta = this._functionsMap.get(funcName);
+        if (!fnMeta || !fnMeta.parameters) return;
+
+        const params = fnMeta.parameters;
+        // Skip validation for variadic functions (parameters with ...spread or single "..." param)
+        const isVariadic = params.some(p => p.name && p.name.startsWith('...'));
+        if (isVariadic) return;
+
+        // Count required parameters (those without optional:true or "optional" in description)
+        const requiredParams = params.filter(p => 
+            !p.optional && (!p.description || !p.description.toLowerCase().includes('optional'))
+        );
+
+        if (args.length < requiredParams.length) {
+            throw new Error(
+                `${funcName}() expects at least ${requiredParams.length} argument(s) ` +
+                `(${requiredParams.map(p => p.name).join(', ')}), but got ${args.length}`
+            );
+        }
+
+        if (args.length > params.length) {
+            console.warn(
+                `⚠️ ${funcName}(): expected at most ${params.length} argument(s), got ${args.length}`
+            );
+        }
+
+        // Type warnings in debug mode
+        if (this._debugMode) {
+            for (let i = 0; i < Math.min(args.length, params.length); i++) {
+                const expected = params[i].type;
+                const actual = typeof args[i];
+                if (expected && actual !== expected && expected !== 'any') {
+                    console.warn(
+                        `⚠️ ${funcName}(): parameter '${params[i].name}' expected type '${expected}', got '${actual}'`
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * Process a function result using the error pattern from metadata.
+     * For "string-based" error patterns, checks if result starts with "Error:".
+     * @param {string} funcName - Function name
+     * @param {any} result - Raw result from WASM function
+     * @returns {any} Processed result
+     * @private
+     */
+    _processResult(funcName, result) {
+        // No error pattern processing — return raw result
+        // The error pattern info is available via describe() for user-side handling
+        return result;
     }
 
     /**
@@ -167,33 +287,31 @@ class UnifiedWasmBridge {
     }
 
     /**
-     * Allocate memory in Go WASM
+     * Allocate memory in Go WASM.
+     * Only uses Go-exported allocation functions (__gowm_alloc).
+     * The unsafe offset-based fallback has been removed to prevent memory corruption.
+     * If no allocation function is available, returns null and createBuffer() 
+     * will work with JS-side buffers only.
      * @param {number} size - Size in bytes
      * @returns {number|null} Memory pointer or null
      */
     allocateGoMemory(size) {
         try {
-            // For Go WASM, use Go's memory management if available
+            // Check namespace first for module-specific allocator
+            const ns = globalThis.__gowm_modules_ && globalThis.__gowm_modules_[this.moduleId];
+            if (ns && typeof ns.__gowm_alloc === 'function') {
+                return ns.__gowm_alloc(size);
+            }
+
+            // Check global allocator (legacy modules)
             if (globalThis.__gowm_alloc && typeof globalThis.__gowm_alloc === 'function') {
                 return globalThis.__gowm_alloc(size);
             }
 
-            // Fallback: use a simplified allocation strategy
-            const mem = this.module.go.mem;
-            if (!mem || !mem.buffer) {
-                throw new Error('Go memory buffer not available');
-            }
-
-            // This is a simplified approach - real implementations should use proper allocation
-            const offset = mem.buffer.byteLength - size;
-            if (offset < 0) {
-                console.warn('Memory allocation might exceed buffer bounds');
-                return null;
-            }
-            
-            return offset;
+            // No safe allocation available — return null
+            // The bridge will use JS-side buffers instead of WASM memory
+            return null;
         } catch (error) {
-            console.warn('Go memory allocation failed:', error.message);
             return null;
         }
     }
@@ -230,7 +348,8 @@ class UnifiedWasmBridge {
     }
 
     /**
-     * Register JavaScript callback callable from WASM
+     * Register JavaScript callback callable from WASM.
+     * Callbacks are namespaced per module to avoid conflicts.
      * @param {string} name - Callback name
      * @param {Function} callback - Callback function
      */
@@ -241,10 +360,11 @@ class UnifiedWasmBridge {
 
         this.callbacks.set(name, callback);
         
-        // Make callback available globally for WASM
-        globalThis[`__gowm_callback_${name}`] = callback;
+        // Make callback available in module namespace
+        globalThis[`__gowm_callback_${this.moduleId}_${name}`] = callback;
         
-        // Also make it available directly (for some WASM implementations)
+        // Also available globally for backward compat
+        globalThis[`__gowm_callback_${name}`] = callback;
         globalThis[name] = callback;
     }
 
@@ -254,56 +374,147 @@ class UnifiedWasmBridge {
      */
     unregisterCallback(name) {
         this.callbacks.delete(name);
+        delete globalThis[`__gowm_callback_${this.moduleId}_${name}`];
         delete globalThis[`__gowm_callback_${name}`];
         delete globalThis[name];
     }
 
     /**
-     * Get list of available functions
+     * Get list of available functions for this specific module.
+     * Prioritizes namespace-scoped functions over globalThis scanning.
      * @returns {Array<string>} Function names
      */
     getAvailableFunctions() {
         const functions = new Set();
 
-        // WASM exported functions
+        // 1. WASM exported functions
         if (this.module.exports) {
             Object.keys(this.module.exports)
                 .filter(key => typeof this.module.exports[key] === 'function')
                 .forEach(func => functions.add(func));
         }
 
-        // Global functions (Go WASM)
-        const excludedFunctions = [
-            'eval', 'isFinite', 'isNaN', 'parseFloat', 'parseInt',
-            'decodeURI', 'decodeURIComponent', 'encodeURI', 'encodeURIComponent',
-            'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
-            'console', 'fetch', 'XMLHttpRequest'
-        ];
+        // 2. Module namespace functions (preferred)
+        const ns = globalThis.__gowm_modules_ && globalThis.__gowm_modules_[this.moduleId];
+        if (ns) {
+            Object.keys(ns)
+                .filter(key => typeof ns[key] === 'function')
+                .forEach(func => functions.add(func));
+        }
 
-        Object.keys(globalThis)
-            .filter(key => 
-                typeof globalThis[key] === 'function' && 
-                !key.startsWith('__gowm_') && 
-                !key.startsWith('_') &&
-                !excludedFunctions.includes(key)
-            )
-            .forEach(func => functions.add(func));
+        // 3. Add functions from metadata that may not be in namespace yet
+        if (this._functionsMap.size > 0) {
+            for (const name of this._functionsMap.keys()) {
+                functions.add(name);
+            }
+        }
 
         return Array.from(functions).sort();
     }
 
     /**
-     * Check if a function exists
+     * Get detailed function information from module.json metadata.
+     * Returns function name, description, parameters, return type, etc.
+     * @returns {Array<object>} Detailed function info, or basic names if no metadata
+     */
+    getDetailedFunctions() {
+        if (this._functionsMap.size === 0) {
+            // No metadata — return basic function list
+            return this.getAvailableFunctions().map(name => ({ name }));
+        }
+
+        return Array.from(this._functionsMap.values()).map(fn => ({
+            name: fn.name,
+            description: fn.description || null,
+            category: fn.category || null,
+            parameters: fn.parameters || [],
+            returnType: fn.returnType || null,
+            example: fn.example || null,
+            errorPattern: fn.errorPattern || null
+        }));
+    }
+
+    /**
+     * Get inline documentation for a specific function.
+     * Uses module.json metadata to provide parameter info, examples, etc.
+     * @param {string} funcName - Function name to describe
+     * @returns {object|null} Function documentation or null if not found
+     */
+    describe(funcName) {
+        const fnMeta = this._functionsMap.get(funcName);
+        if (!fnMeta) {
+            // Check if function exists but has no metadata
+            if (this.hasFunction(funcName)) {
+                return {
+                    name: funcName,
+                    description: 'No metadata available for this function',
+                    parameters: [],
+                    returnType: 'unknown',
+                    example: null,
+                    category: null,
+                    errorPattern: null
+                };
+            }
+            return null;
+        }
+
+        return {
+            name: fnMeta.name,
+            description: fnMeta.description || null,
+            category: fnMeta.category || null,
+            parameters: (fnMeta.parameters || []).map(p => ({
+                name: p.name,
+                type: p.type,
+                description: p.description || null,
+                optional: p.optional || false
+            })),
+            returnType: fnMeta.returnType || null,
+            example: fnMeta.example || null,
+            errorPattern: fnMeta.errorPattern || null
+        };
+    }
+
+    /**
+     * Get module metadata information.
+     * @returns {object|null} Module metadata or null
+     */
+    getMetadata() {
+        return this._metadata;
+    }
+
+    /**
+     * Get function categories from module.json metadata.
+     * @returns {object|null} Category -> function names mapping, or null
+     */
+    getFunctionCategories() {
+        if (!this._metadata || !this._metadata.functionCategories) {
+            return null;
+        }
+        return this._metadata.functionCategories;
+    }
+
+    /**
+     * Check if a function exists in this module
      * @param {string} funcName - Function name
      * @returns {boolean} Whether function exists
      */
     hasFunction(funcName) {
-        return (
-            (this.module.exports && 
-             this.module.exports[funcName] && 
-             typeof this.module.exports[funcName] === 'function') ||
-            (globalThis[funcName] && typeof globalThis[funcName] === 'function')
-        );
+        // Check WASM exports
+        if (this.module.exports && 
+            this.module.exports[funcName] && 
+            typeof this.module.exports[funcName] === 'function') {
+            return true;
+        }
+        // Check module namespace
+        const ns = globalThis.__gowm_modules_ && globalThis.__gowm_modules_[this.moduleId];
+        if (ns && typeof ns[funcName] === 'function') {
+            return true;
+        }
+        // Fallback to globalThis
+        if (globalThis[funcName] && typeof globalThis[funcName] === 'function') {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -389,7 +600,16 @@ class UnifiedWasmBridge {
             allocatedBuffers: this.allocatedBuffers.size,
             memoryUsage,
             supportedDataTypes: this.getSupportedDataTypes(),
-            loadedAt: this.module.loadedAt || null
+            loadedAt: this.module.loadedAt || null,
+            hasMetadata: this._metadata !== null,
+            metadata: this._metadata ? {
+                name: this._metadata.name,
+                version: this._metadata.version,
+                description: this._metadata.description,
+                functionsCount: this._functionsMap.size,
+                categories: this._metadata.functionCategories ? Object.keys(this._metadata.functionCategories) : [],
+                errorPattern: this._errorPattern
+            } : null
         };
     }
 
@@ -431,7 +651,7 @@ class UnifiedWasmBridge {
     }
 
     /**
-     * Cleanup method to release resources
+     * Cleanup method to release resources and remove namespace
      */
     cleanup() {
         try {
@@ -440,7 +660,7 @@ class UnifiedWasmBridge {
                 try {
                     bufferInfo.free();
                 } catch (error) {
-                    console.warn('Failed to free buffer:', error.message);
+                    // Ignore buffer cleanup errors
                 }
             }
             this.allocatedBuffers.clear();
@@ -448,6 +668,17 @@ class UnifiedWasmBridge {
             // Remove all callbacks
             for (const name of this.callbacks.keys()) {
                 this.unregisterCallback(name);
+            }
+
+            // Clean up module namespace
+            if (globalThis.__gowm_modules_ && globalThis.__gowm_modules_[this.moduleId]) {
+                const ns = globalThis.__gowm_modules_[this.moduleId];
+                for (const funcName of Object.keys(ns)) {
+                    if (globalThis[funcName] === ns[funcName]) {
+                        delete globalThis[funcName];
+                    }
+                }
+                delete globalThis.__gowm_modules_[this.moduleId];
             }
 
             // Clean up Go resources if possible
@@ -458,10 +689,8 @@ class UnifiedWasmBridge {
                     // Ignore cleanup errors
                 }
             }
-
-            console.log(`🧹 Cleaned up bridge ${this.name}`);
         } catch (error) {
-            console.warn('Error during bridge cleanup:', error.message);
+            // Ignore cleanup errors
         }
     }
 

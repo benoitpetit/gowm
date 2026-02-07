@@ -3,21 +3,27 @@
  * 
  * Demonstrates loading and using a Go Wasm module
  * for advanced JSON/XML processing operations from GitHub repository.
+ * 
+ * v1.4.0: Metadata exploitation, SHA256 integrity, function validation
+ * v1.3.0: Cache, retry, streaming, compression support
  */
 
-const { loadFromGitHub } = require('../../src/index.js');
+const { GoWM } = require('../../src/index.js');
 
 async function main() {
+    const gowm = new GoWM({ logLevel: 'info' });
+
     try {
         // Load jsonxml-wasm module from GitHub repository
+        // v1.4.0: module.json metadata fetched, integrity verified
         console.log('Loading JSON/XML WASM module...');
-        const jsonxml = await loadFromGitHub('benoitpetit/wasm-modules-repository', {
+        const jsonxml = await gowm.loadFromGitHub('benoitpetit/wasm-modules-repository', {
             path: 'jsonxml-wasm',
             filename: 'main.wasm',
             name: 'jsonxml-wasm',
-            branch: 'master'
+            cache: false // force fresh download
         });
-        console.log('✅ JSON/XML module loaded successfully\n');
+        console.log('JSON/XML module loaded successfully\n');
 
         // Test data
         const testJson = '{"greeting": "hello", "target": "world", "number": 42}';
@@ -57,6 +63,21 @@ async function main() {
             console.log('✅ Custom root conversion successful!');
             console.log(`📤 Generated XML with custom root "${customXmlResult.root}":`);
             console.log(customXmlResult.data);
+        }
+
+        // v1.4.0: Module metadata
+        console.log('\n=== Module Metadata (v1.4.0) ===');
+        const metadata = gowm.getModuleMetadata('jsonxml-wasm');
+        if (metadata) {
+            console.log(`Module: ${metadata.name} v${metadata.version}`);
+            console.log(`Documented functions: ${metadata.functions?.length || 0}`);
+        }
+
+        // v1.4.0: Describe a function
+        const desc = gowm.describeFunction('jsonxml-wasm', 'jsonToXML');
+        if (desc) {
+            console.log(`\n${desc.name}: ${desc.description}`);
+            console.log(`Parameters: ${desc.parameters?.map(p => `${p.name} (${p.type})`).join(', ')}`);
         }
 
     } catch (error) {

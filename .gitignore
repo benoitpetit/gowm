@@ -106,3 +106,7 @@ temp/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# GoWM specific ignores
+rapport.*
+roadmap.*

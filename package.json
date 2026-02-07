@@ -1,18 +1,31 @@
 {
     "name": "gowm",
-    "version": "1.1.0",
-    "description": "Go Wasm Manager - Loader system for Go WebAssembly modules with GitHub repository support. Features intelligent auto-detection and enhanced memory management.",
+    "version": "1.1.1",
+    "description": "Go Wasm Manager - Loader system for Go WebAssembly modules with GitHub repository support. Features auto-detection, event system, CLI, React hooks, Vue composables and TypeScript type generation.",
     "main": "src/index.js",
     "browser": "src/browser.js",
     "module": "src/browser.js",
     "types": "types/index.d.ts",
+    "bin": {
+        "gowm": "./src/cli/gowm-cli.js"
+    },
     "exports": {
         ".": {
+            "types": "./types/index.d.ts",
             "node": "./src/index.js",
             "browser": "./src/browser.js",
             "import": "./src/browser.js",
             "require": "./src/index.js"
-        }
+        },
+        "./react": {
+            "types": "./types/react.d.ts",
+            "default": "./src/react/index.js"
+        },
+        "./vue": {
+            "types": "./types/vue.d.ts",
+            "default": "./src/vue/index.js"
+        },
+        "./tools/type-generator": "./src/tools/type-generator.js"
     },
     "files": [
         "src/",
@@ -22,12 +35,15 @@
         "LICENSE"
     ],
     "scripts": {
-        "test": "node examples/node/basic.js",
+        "test": "jest --verbose",
+        "test:unit": "jest --verbose tests/unit/",
+        "test:integration": "jest --verbose tests/integration/",
+        "test:coverage": "jest --coverage",
         "test:basic": "node examples/node/basic.js",
         "test:crypto": "node examples/node/crypto.js",
         "test:node": "node test-quick.js",
         "test:examples": "node test-examples.js",
-        "test:all": "npm run test:examples",
+        "test:all": "npm run test && npm run test:examples",
         "check": "node check-project.js",
         "demo:serve": "npx serve examples/browser -p 3000",
         "demo:browser": "npm run demo:serve && echo 'Open http://localhost:3000'",
@@ -48,7 +64,13 @@
         "typescript",
         "auto-detection",
         "memory-management",
-        "cross-platform"
+        "cross-platform",
+        "react",
+        "vue",
+        "hooks",
+        "composables",
+        "cli",
+        "events"
     ],
     "author": "devbyben",
     "license": "MIT",
@@ -61,12 +83,26 @@
     },
     "homepage": "https://github.com/benoitpetit/gowm#readme",
     "engines": {
-        "node": ">=14.0.0"
+        "node": ">=18.0.0"
+    },
+    "peerDependencies": {
+        "react": ">=16.8.0",
+        "vue": ">=3.0.0"
+    },
+    "peerDependenciesMeta": {
+        "react": {
+            "optional": true
+        },
+        "vue": {
+            "optional": true
+        }
     },
     "devDependencies": {
-        "@types/node": "^20.0.0"
+        "@types/node": "^20.0.0",
+        "jest": "^29.7.0"
     },
-    "dependencies": {
+    "dependencies": {},
+    "optionalDependencies": {
         "node-fetch": "^3.3.2"
     }
 }

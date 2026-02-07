@@ -3,25 +3,39 @@
  * 
  * Demonstrates loading and using a Go Wasm module
  * for cryptographic operations from GitHub repository.
+ * 
+ * v1.4.0: Metadata exploitation, SHA256 integrity, function validation
+ * v1.3.0: Cache, retry, streaming, compression support
  */
 
-const { loadFromGitHub } = require('../../src/index.js');
+const { GoWM } = require('../../src/index.js');
 
 async function main() {
+    const gowm = new GoWM({ logLevel: 'info' });
+
     try {
         // Load crypto WASM module from GitHub repository
+        // v1.4.0: Integrity verified via .wasm.integrity, metadata loaded from module.json
         console.log('Loading crypto WASM module...');
-        const crypto = await loadFromGitHub('benoitpetit/wasm-modules-repository', {
+        const crypto = await gowm.loadFromGitHub('benoitpetit/wasm-modules-repository', {
             path: 'crypto-wasm',
             filename: 'main.wasm',
             name: 'crypto',
-            branch: 'master'
+            cache: { ttl: 7200000 } // 2h cache TTL
         });
 
-        console.log('✅ Crypto module loaded successfully\n');
+        console.log('Crypto module loaded successfully\n');
+
+        // v1.4.0: Describe a function before using it
+        console.log('=== Function Documentation (v1.4.0) ===');
+        const hashDesc = gowm.describeFunction('crypto', 'hashSHA256');
+        if (hashDesc) {
+            console.log(`${hashDesc.name}: ${hashDesc.description}`);
+            console.log(`Parameters: ${hashDesc.parameters?.map(p => `${p.name} (${p.type})`).join(', ')}`);
+        }
 
         // Hash operations
-        console.log('=== Hash Operations ===');
+        console.log('\n=== Hash Operations ===');
         const message = 'Hello GoWM World!';
         const hashResult = crypto.call('hashSHA256', message);
         
@@ -66,22 +80,30 @@ async function main() {
         console.log('\n=== UUID Generation ===');
         const uuid1 = crypto.call('generateUUID');
         const uuid2 = crypto.call('generateUUID');
-        console.log('UUID 1:', uuid1);
-        console.log('UUID 2:', uuid2);
-        console.log('Unique:', uuid1 !== uuid2);
+        console.log('UUID 1:', typeof uuid1 === 'object' ? uuid1.uuid : uuid1);
+        console.log('UUID 2:', typeof uuid2 === 'object' ? uuid2.uuid : uuid2);
+        console.log('Unique:', (typeof uuid1 === 'object' ? uuid1.uuid : uuid1) !== (typeof uuid2 === 'object' ? uuid2.uuid : uuid2));
 
-        // Module info
-        console.log('\n=== Module Info ===');
+        // v1.4.0: Module metadata and stats
+        console.log('\n=== Module Info (v1.4.0) ===');
         const stats = crypto.getStats();
         console.log('Module name:', stats.name);
-        
-        // Get the actual WASM module functions (not all global functions)
-        const moduleFunctions = crypto.call('getAvailableFunctions');
-        if (moduleFunctions && Array.isArray(moduleFunctions)) {
-            console.log('Module functions:', moduleFunctions.length);
-            console.log('Functions:', moduleFunctions);
-        } else {
-            console.log('Available functions (all global):', stats.functions.length);
+        console.log('Has metadata:', stats.hasMetadata);
+        if (stats.metadata) {
+            console.log('Version:', stats.metadata.version);
+            console.log('Documented functions:', stats.metadata.functionsCount);
+            if (stats.metadata.categories) {
+                console.log('Categories:', stats.metadata.categories.join(', '));
+            }
+        }
+
+        // v1.4.0: List all documented functions with details
+        const detailed = crypto.getDetailedFunctions();
+        if (detailed.length > 0) {
+            console.log('\nDetailed functions:');
+            for (const fn of detailed) {
+                console.log(`  - ${fn.name}: ${fn.description || '(no desc)'}`);
+            }
         }
 
     } catch (error) {

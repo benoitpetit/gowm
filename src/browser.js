@@ -70,9 +70,12 @@
         getTotalMemoryUsage: gowm.getTotalMemoryUsage.bind(gowm),
         testAll: gowm.testAll.bind(gowm),
         getHelp: gowm.getHelp.bind(gowm),
+        clearCache: gowm.clearCache.bind(gowm),
+        getModuleMetadata: gowm.getModuleMetadata.bind(gowm),
+        describeFunction: gowm.describeFunction.bind(gowm),
 
         // Version info
-        version: '1.1.0-browser',
+        version: '1.1.1-browser',
 
         // Create new instance
         create: () => new GoWM()

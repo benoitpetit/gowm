@@ -3,22 +3,27 @@
  * 
  * Demonstrates loading and using a Go Wasm module
  * for advanced text processing operations from GitHub repository.
+ * 
+ * v1.4.0: Metadata exploitation, SHA256 integrity, function validation
+ * v1.3.0: Cache, retry, streaming, compression support
  */
 
-const { loadFromGitHub } = require('../../src/index.js');
+const { GoWM } = require('../../src/index.js');
 
 async function main() {
+    const gowm = new GoWM({ logLevel: 'info' });
+
     try {
         // Load text-wasm module from GitHub repository
+        // v1.4.0: module.json is fetched, integrity is verified, readySignal auto-discovered
         console.log('Loading text processing WASM module...');
-        const textProcessor = await loadFromGitHub('benoitpetit/wasm-modules-repository', {
+        const textProcessor = await gowm.loadFromGitHub('benoitpetit/wasm-modules-repository', {
             path: 'text-wasm',
             filename: 'main.wasm',
-            name: 'text',
-            branch: 'master'
+            name: 'text'
         });
 
-        console.log('✅ Text processing module loaded successfully\n');
+        console.log('Text processing module loaded successfully\n');
 
         // Enable silent mode for cleaner output
         textProcessor.call('setSilentMode', true);
@@ -118,6 +123,20 @@ async function main() {
         // Get available functions (commented out due to module instability)
         console.log('\n=== Available Functions ===');
         console.log('Text processing functions: textSimilarity, levenshteinDistance, wordCount, camelCase, kebabCase, snakeCase, slugify, extractEmails, extractURLs, removeDiacritics, soundex, readingTime');
+
+        // v1.4.0: Module metadata
+        console.log('\n=== Module Metadata (v1.4.0) ===');
+        const metadata = gowm.getModuleMetadata('text');
+        if (metadata) {
+            console.log(`Module: ${metadata.name} v${metadata.version}`);
+            console.log(`Functions documented: ${metadata.functions?.length || 0}`);
+        }
+
+        // v1.4.0: Describe a function
+        const descSimilarity = gowm.describeFunction('text', 'textSimilarity');
+        if (descSimilarity) {
+            console.log(`\n${descSimilarity.name}: ${descSimilarity.description}`);
+        }
 
         console.log('\n🎉 All text processing examples completed successfully!');
 

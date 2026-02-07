@@ -4,11 +4,40 @@ const UnifiedWasmBridge = require('../bridges/unified-bridge');
 /**
  * GoWM - Go WebAssembly Manager
  * Main class that provides a simplified interface for loading and managing WASM modules
+ * 
+ * @version 1.1.1
  */
 class GoWM {
-    constructor() {
+    /**
+     * @param {object} options - GoWM configuration options
+     * @param {string} [options.logLevel='info'] - Log level: 'silent' | 'error' | 'warn' | 'info' | 'debug'
+     * @param {object} [options.logger=console] - Custom logger (must have log, warn, error, debug methods)
+     * @param {number} [options.memoryWarningThreshold] - Memory usage threshold in bytes to emit 'memory:warning'
+     */
+    constructor(options = {}) {
         this.loader = new UnifiedWasmLoader();
         this.modules = new Map();
+        this.logLevel = options.logLevel || 'info';
+        this.logger = options.logger || console;
+        this._listeners = new Map();
+        this._memoryWarningThreshold = options.memoryWarningThreshold || null;
+    }
+
+    /**
+     * Internal logging with level filtering
+     * @param {'error'|'warn'|'info'|'debug'} level
+     * @param  {...any} args
+     */
+    _log(level, ...args) {
+        const levels = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
+        const currentLevel = levels[this.logLevel] !== undefined ? levels[this.logLevel] : 3;
+        const msgLevel = levels[level] !== undefined ? levels[level] : 3;
+        if (msgLevel <= currentLevel) {
+            if (level === 'error') this.logger.error(...args);
+            else if (level === 'warn') this.logger.warn(...args);
+            else if (level === 'debug' && this.logger.debug) this.logger.debug(...args);
+            else this.logger.log(...args);
+        }
     }
 
     /**
@@ -22,16 +51,28 @@ class GoWM {
             throw new Error('source must be a non-empty string');
         }
 
-        try {
-            const module = await this.loader.loadModule(source, options);
-            const bridge = new UnifiedWasmBridge(module, options);
+        const moduleId = options.name || this.loader.extractModuleId(source);
 
-            const moduleId = options.name || this.loader.extractModuleId(source);
+        try {
+            this._emit('module:loading', { name: moduleId, source });
+            const startTime = Date.now();
+
+            const module = await this.loader.loadModule(source, { ...options, name: moduleId });
+            const bridge = new UnifiedWasmBridge(module, { 
+                ...options, 
+                name: moduleId,
+                logLevel: this.logLevel 
+            });
+
             this.modules.set(moduleId, { module, bridge, source });
 
-            console.log(`✅ GoWM: Successfully loaded module '${moduleId}' from ${source}`);
+            const loadTime = Date.now() - startTime;
+            this._log('info', `GoWM: Successfully loaded module '${moduleId}' from ${source}`);
+            this._emit('module:loaded', { name: moduleId, bridge, loadTime, source });
+            this._checkMemoryWarning();
             return bridge;
         } catch (error) {
+            this._emit('module:error', { name: moduleId, error, source });
             throw new Error(`Failed to load WASM module from ${source}: ${error.message}`);
         }
     }
@@ -48,7 +89,7 @@ class GoWM {
         }
 
         try {
-            console.log(`🔄 GoWM: Loading WASM module from GitHub: ${githubRepo}`);
+            this._log('info', `GoWM: Loading WASM module from GitHub: ${githubRepo}`);
 
             // Extract repo name for module ID if not provided
             const repoInfo = this.loader.parseGitHubRepo(githubRepo);
@@ -79,7 +120,7 @@ class GoWM {
         }
 
         try {
-            console.log(`🔄 GoWM: Loading WASM module from URL: ${url}`);
+            this._log('info', `GoWM: Loading WASM module from URL: ${url}`);
             return this.load(url, options);
         } catch (error) {
             throw new Error(`Failed to load from URL ${url}: ${error.message}`);
@@ -102,7 +143,7 @@ class GoWM {
         }
 
         try {
-            console.log(`🔄 GoWM: Loading WASM module from file: ${filePath}`);
+            this._log('info', `GoWM: Loading WASM module from file: ${filePath}`);
             return this.load(filePath, options);
         } catch (error) {
             throw new Error(`Failed to load from file ${filePath}: ${error.message}`);
@@ -149,10 +190,11 @@ class GoWM {
             // Remove from modules map
             this.modules.delete(name);
 
-            console.log(`🗑️ GoWM: Unloaded module '${name}'`);
+            this._log('info', `GoWM: Unloaded module '${name}'`);
+            this._emit('module:unloaded', { name });
             return true;
         } catch (error) {
-            console.warn(`Failed to unload module ${name}:`, error.message);
+            this._log('warn', `Failed to unload module ${name}:`, error.message);
             return false;
         }
     }
@@ -167,7 +209,7 @@ class GoWM {
             this.unload(name);
         }
 
-        console.log('🗑️ GoWM: Unloaded all modules');
+        this._log('info', 'GoWM: Unloaded all modules');
     }
 
     /**
@@ -246,12 +288,19 @@ class GoWM {
     }
 
     /**
-     * Get GoWM version
+     * Get GoWM version (reads from package.json when possible)
      * @returns {string} Version string
      */
     getVersion() {
-        // This would typically be read from package.json
-        return '1.1.0';
+        try {
+            if (typeof require !== 'undefined') {
+                const pkg = require('../../package.json');
+                return pkg.version;
+            }
+        } catch (e) {
+            // Fallback for browser or if package.json is not available
+        }
+        return '1.1.1';
     }
 
     /**
@@ -261,6 +310,7 @@ class GoWM {
     getHelp() {
         return {
             description: 'GoWM - Go WebAssembly Manager with unified loader system',
+            version: this.getVersion(),
             methods: {
                 'load(source, options)': 'Load WASM from any source (file, URL, GitHub)',
                 'loadFromGitHub(repo, options)': 'Load WASM from GitHub repository',
@@ -271,7 +321,10 @@ class GoWM {
                 'unloadAll()': 'Unload all modules',
                 'listModules()': 'List loaded module names',
                 'getStats()': 'Get system statistics',
-                'testAll()': 'Test all loaded modules'
+                'testAll()': 'Test all loaded modules',
+                'clearCache(options)': 'Clear WASM cache (memory + disk)',
+                'getModuleMetadata(name)': 'Get module.json metadata for a loaded module',
+                'describeFunction(name, funcName)': 'Get inline docs for a function'
             },
             loadingSources: {
                 'Local file': 'gowm.loadFromFile("./module.wasm")',
@@ -281,15 +334,135 @@ class GoWM {
             },
             options: {
                 'name': 'Module name (string)',
-                'branch': 'Git branch for GitHub (string)',
+                'branch': 'Git branch for GitHub (string, auto-detected by default)',
                 'tag': 'Git tag for GitHub (string)',
                 'path': 'Path within repository (string)',
                 'filename': 'Specific filename (string)',
                 'preInit': 'Pre-initialize module (boolean, default: true)',
                 'timeout': 'Initialization timeout (number, default: 15000)',
-                'goRuntimePath': 'Custom Go runtime path (string)'
+                'goRuntimePath': 'Custom Go runtime path (string)',
+                'cache': 'Cache options (false to disable, or { ttl, diskCache })',
+                'retries': 'Number of retry attempts (number, default: 3)',
+                'retryDelay': 'Base retry delay in ms (number, default: 1000)',
+                'metadata': 'Fetch module.json metadata (boolean, default: true)',
+                'integrity': 'Verify SHA256 integrity (boolean, default: true)',
+                'validateCalls': 'Validate function calls via metadata (boolean, default: true)'
             }
         };
+    }
+
+    /**
+     * Get module.json metadata for a loaded module.
+     * @param {string} name - Module name (default: 'default')
+     * @returns {object|null} Module metadata or null
+     */
+    getModuleMetadata(name = 'default') {
+        const entry = this.modules.get(name);
+        if (!entry) return null;
+        return entry.bridge.getMetadata();
+    }
+
+    /**
+     * Get inline documentation for a function in a loaded module.
+     * @param {string} name - Module name
+     * @param {string} funcName - Function name
+     * @returns {object|null} Function documentation or null
+     */
+    describeFunction(name, funcName) {
+        const entry = this.modules.get(name);
+        if (!entry) return null;
+        return entry.bridge.describe(funcName);
+    }
+
+    /**
+     * Register an event listener
+     * @param {string} event - Event name: 'module:loading' | 'module:loaded' | 'module:error' | 'module:unloaded' | 'memory:warning'
+     * @param {Function} callback - Listener function
+     * @returns {GoWM} this (for chaining)
+     */
+    on(event, callback) {
+        if (typeof callback !== 'function') {
+            throw new Error('Event callback must be a function');
+        }
+        if (!this._listeners.has(event)) {
+            this._listeners.set(event, []);
+        }
+        this._listeners.get(event).push(callback);
+        return this;
+    }
+
+    /**
+     * Remove an event listener
+     * @param {string} event - Event name
+     * @param {Function} callback - Listener to remove
+     * @returns {GoWM} this (for chaining)
+     */
+    off(event, callback) {
+        const listeners = this._listeners.get(event);
+        if (listeners) {
+            this._listeners.set(event, listeners.filter(fn => fn !== callback));
+        }
+        return this;
+    }
+
+    /**
+     * Register a one-time event listener
+     * @param {string} event - Event name
+     * @param {Function} callback - Listener function (called once then removed)
+     * @returns {GoWM} this (for chaining)
+     */
+    once(event, callback) {
+        const wrapper = (data) => {
+            this.off(event, wrapper);
+            callback(data);
+        };
+        wrapper._original = callback;
+        return this.on(event, wrapper);
+    }
+
+    /**
+     * Emit an event to all registered listeners
+     * @param {string} event - Event name
+     * @param {object} data - Event data
+     * @private
+     */
+    _emit(event, data) {
+        const listeners = this._listeners.get(event);
+        if (listeners) {
+            for (const fn of [...listeners]) {
+                try {
+                    fn(data);
+                } catch (e) {
+                    this._log('error', `GoWM: Error in event listener for '${event}':`, e.message);
+                }
+            }
+        }
+    }
+
+    /**
+     * Check memory usage and emit warning if threshold exceeded
+     * @private
+     */
+    _checkMemoryWarning() {
+        if (!this._memoryWarningThreshold) return;
+        const usage = this.getTotalMemoryUsage();
+        if (usage > this._memoryWarningThreshold) {
+            this._emit('memory:warning', {
+                usage,
+                threshold: this._memoryWarningThreshold,
+                modules: this.listModules()
+            });
+        }
+    }
+
+    /**
+     * Clear the WASM bytes cache (memory + disk/IndexedDB)
+     * @param {object} options - { memory: true, disk: true }
+     * @returns {Promise<void>}
+     */
+    async clearCache(options = {}) {
+        await this.loader.clearCache(options);
+        this._log('info', 'GoWM: Cache cleared');
     }
 
     /**
@@ -297,7 +470,7 @@ class GoWM {
      * @deprecated Use loadFromGitHub instead
      */
     async loadFromNPM(packageName, options = {}) {
-        console.warn('⚠️ loadFromNPM is deprecated. Use loadFromGitHub instead.');
+        this._log('warn', 'loadFromNPM is deprecated. Use loadFromGitHub instead.');
 
         // Try to convert NPM package to potential GitHub repo
         try {

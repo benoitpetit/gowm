@@ -1,6 +1,7 @@
 const GoWM = require('./core/gowm');
 const UnifiedWasmLoader = require('./loaders/unified-loader');
 const UnifiedWasmBridge = require('./bridges/unified-bridge');
+const { generateTypes, generateTypesFromGitHub } = require('./tools/type-generator');
 
 // Create main instance
 const gowm = new GoWM();
@@ -25,6 +26,9 @@ module.exports = {
     getTotalMemoryUsage: gowm.getTotalMemoryUsage.bind(gowm),
     testAll: gowm.testAll.bind(gowm),
     getHelp: gowm.getHelp.bind(gowm),
+    clearCache: gowm.clearCache.bind(gowm),
+    getModuleMetadata: gowm.getModuleMetadata.bind(gowm),
+    describeFunction: gowm.describeFunction.bind(gowm),
 
     // Classes for advanced usage
     GoWM,
@@ -35,9 +39,13 @@ module.exports = {
     WasmLoader: UnifiedWasmLoader,
     WasmBridge: UnifiedWasmBridge,
 
-    // Version info
-    version: '1.1.0',
+    // Type generator (Phase 4)
+    generateTypes,
+    generateTypesFromGitHub,
 
-    // Create new instance
-    create: () => new GoWM()
+    // Version info (from package.json)
+    version: require('../package.json').version,
+
+    // Create new instance with custom options
+    create: (options) => new GoWM(options)
 };
