@@ -1,7 +1,7 @@
 /**
  * GoWM React Hooks TypeScript Definitions
  * 
- * @version 1.1.1
+ * @version 1.1.2
  * @module gowm/react
  */
 

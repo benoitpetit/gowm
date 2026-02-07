@@ -10,14 +10,14 @@
  *   npx gowm verify <file> --integrity <hash> Verify WASM file integrity
  *   npx gowm install <repo> <module> [--dir]  Download WASM module to local directory
  * 
- * @version 1.1.1
+ * @version 1.1.2
  */
 
 const fs = require('fs');
 const path = require('path');
 
 const HELP = `
-GoWM CLI v1.1.1 — Go WebAssembly Module Manager
+GoWM CLI v1.1.2 — Go WebAssembly Module Manager
 
 Usage:
   gowm <command> [arguments] [options]
@@ -53,7 +53,7 @@ async function main() {
     }
 
     if (args.includes('--version') || args.includes('-v')) {
-        console.log('gowm v1.1.1');
+        console.log('gowm v1.1.2');
         process.exit(0);
     }
 

@@ -2,7 +2,7 @@
  * GoWM Type Generator
  * Generates TypeScript type definitions from module.json metadata.
  * 
- * @version 1.1.1
+ * @version 1.1.2
  */
 
 /**

@@ -75,7 +75,7 @@
         describeFunction: gowm.describeFunction.bind(gowm),
 
         // Version info
-        version: '1.1.1-browser',
+        version: '1.1.2-browser',
 
         // Create new instance
         create: () => new GoWM()

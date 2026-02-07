@@ -5,7 +5,7 @@ const UnifiedWasmBridge = require('../bridges/unified-bridge');
  * GoWM - Go WebAssembly Manager
  * Main class that provides a simplified interface for loading and managing WASM modules
  * 
- * @version 1.1.1
+ * @version 1.1.2
  */
 class GoWM {
     /**
@@ -300,7 +300,7 @@ class GoWM {
         } catch (e) {
             // Fallback for browser or if package.json is not available
         }
-        return '1.1.1';
+        return '1.1.2';
     }
 
     /**

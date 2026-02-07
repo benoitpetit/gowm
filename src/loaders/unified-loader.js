@@ -3,22 +3,18 @@
  * Supports loading from local files, HTTP URLs, and GitHub repositories
  * Works in both Node.js and browser environments
  * 
- * @version 1.1.1
- * Changes v1.4.0:
+ * @version 1.1.2
+ * Features:
  * - Auto-download and parse module.json metadata from GitHub repos
  * - SHA256 integrity verification via .wasm.integrity files
  * - Auto-discover readySignal from module.json gowmConfig
  * - Function call validation (parameter count + type warnings)
  * - bridge.describe(funcName) for inline documentation
- * 
- * Previous (v1.3.0):
  * - Multi-level cache (memory → filesystem/IndexedDB → network)
  * - Promise-based readiness signals (callback-first, polling fallback)
  * - WebAssembly.instantiateStreaming() for HTTP loads
  * - Retry with exponential backoff on network failures
  * - Support for compressed WASM files (.wasm.gz, .wasm.br)
- * 
- * Previous (v1.2.0):
  * - Fixed source detection (local paths no longer misidentified as GitHub repos)
  * - Auto-detect default branch via GitHub API (fallback: main → master)
  * - Module namespace isolation via __gowm_modules_ prefix

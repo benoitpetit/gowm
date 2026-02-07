@@ -3,15 +3,13 @@
  * Provides interface between JavaScript and WASM modules
  * Works in both Node.js and browser environments
  * 
- * @version 1.1.1
- * Changes v1.4.0:
+ * @version 1.1.2
+ * Features:
  * - describe(funcName) for inline documentation from module.json
  * - getDetailedFunctions() returns functions with metadata
  * - Automatic parameter count validation on call()
  * - Type warnings in debug mode
  * - Error pattern detection from gowmConfig
- * 
- * Previous (v1.2.0):
  * - Namespace-aware function calls via __gowm_modules_[moduleId]
  * - Fixed allocateGoMemory (no longer uses unsafe offset calculation)
  */

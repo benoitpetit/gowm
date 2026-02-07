@@ -30,7 +30,7 @@
 - 📡 **Event System** - `on()` / `off()` / `once()` for module lifecycle events
 - 🏗️ **Type Generator** - Generate TypeScript interfaces from `module.json`
 
-### 🆕 New in v1.1.1
+### 🆕 New in v1.1.2
 
 - 📡 **Event System** - `on('module:loaded')`, `on('module:error')`, `on('memory:warning')` with chaining
 - ⚛️ **React Hooks** - `import { useWasm } from 'gowm/react'` with auto-cleanup and reload
@@ -39,10 +39,6 @@
 - 🏗️ **Type Generator** - `generateTypes()` creates TypeScript interfaces from `module.json`
 - 📦 **ESM Exports Map** - Sub-path exports `gowm/react`, `gowm/vue`, `gowm/tools/type-generator`
 - 📋 **TypeScript Definitions** - Dedicated `types/react.d.ts` and `types/vue.d.ts`
-- 🧪 **274 Unit Tests** - Extended coverage for all Phase 4 features
-
-### Previous (v1.4.0)
-
 - 📋 **Module Metadata** - Automatic `module.json` fetching from GitHub repositories
 - 🔒 **SHA256 Integrity** - WASM file integrity verification via `.wasm.integrity` files (SRI format)
 - 🎯 **readySignal Auto-Discovery** - Uses `gowmConfig.readySignal` from metadata instead of generic polling
@@ -50,22 +46,17 @@
 - 📖 **`describe()` Documentation** - Inline documentation for functions (`bridge.describe('add')`)
 - 📊 **`getDetailedFunctions()`** - Rich function listing with parameters, types, examples
 - 🗂️ **`getFunctionCategories()`** - Organized function categories from metadata
-
-### Previous (v1.3.0)
-
 - 💾 **Multi-Level Cache** - Memory (L1) + disk/IndexedDB (L2) caching with configurable TTL
 - 🔁 **Retry with Backoff** - Automatic retry with exponential backoff on network failures
 - ⚡ **Streaming Instantiation** - `WebAssembly.instantiateStreaming()` for HTTP loads (compile during download)
 - 🎯 **Promise-Based Readiness** - Callback-first signals with adaptive polling fallback
 - 📦 **Compressed WASM** - Auto-detect and decompress `.wasm.gz` and `.wasm.br` files
-
-### Previous (v1.2.0)
-
 - 🔒 **Module Namespace Isolation** - Each module gets its own namespace via `globalThis.__gowm_modules_`
 - 🌿 **Auto Branch Detection** - GitHub default branch auto-detected via API
 - 🔍 **Improved Source Detection** - Strict local path and GitHub URL detection
 - 📝 **Configurable Logging** - Log levels with custom logger support
 - 🛡️ **Safe Memory Allocation** - Removed unsafe offset-based fallback
+- 🧪 **274 Unit Tests** - Extended coverage for all features
 
 ## 📥 Installation
 
@@ -90,7 +81,7 @@ async function example() {
     const gowm = new GoWM({ logLevel: "info" });
 
     // Load from GitHub repository (branch auto-detected)
-    // v1.4.0: module.json metadata fetched, SHA256 integrity verified
+    // module.json metadata fetched, SHA256 integrity verified
     const math = await gowm.loadFromGitHub(
       "benoitpetit/wasm-modules-repository",
       {
@@ -104,24 +95,24 @@ async function example() {
       },
     );
 
-    // Call functions (v1.4.0: parameters validated against metadata)
+    // Call functions (parameters validated against metadata)
     const result = math.call("add", 5, 3);
     console.log("5 + 3 =", result); // 8
 
-    // v1.4.0: Describe a function from module.json metadata
+    // Describe a function from module.json metadata
     const desc = gowm.describeFunction("math", "add");
     console.log(desc);
     // { name: 'add', description: '...', parameters: [...], returnType: '...' }
 
-    // v1.4.0: Get detailed function list with metadata
+    // Get detailed function list with metadata
     const functions = math.getDetailedFunctions();
     console.log("Functions:", functions.length);
 
-    // v1.4.0: Get function categories
+    // Get function categories
     const categories = math.getFunctionCategories();
     console.log("Categories:", Object.keys(categories));
 
-    // v1.4.0: Module metadata
+    // Module metadata
     const metadata = gowm.getModuleMetadata("math");
     console.log(`${metadata.name} v${metadata.version}`);
 
@@ -162,7 +153,7 @@ example();
 
 ## 🔄 Loader System
 
-GoWM v1.1.0 features a loader system that handles all source types with a single API:
+GoWM v1.1.2 features a loader system that handles all source types with a single API:
 
 ### Auto-Detection
 
@@ -270,9 +261,9 @@ Loads a WASM module from a GitHub repository with automatic file resolution.
   - `timeout` (number): Initialization timeout (default: 15000ms)
   - `goRuntimePath` (string): Custom path to wasm_exec.js
   - `preInit` (boolean): Pre-initialize the module (default: true)
-  - `metadata` (boolean): Fetch module.json metadata (default: true) _(v1.4.0)_
-  - `integrity` (boolean): Verify SHA256 integrity (default: true) _(v1.4.0)_
-  - `validateCalls` (boolean): Validate function parameters (default: true) _(v1.4.0)_
+  - `metadata` (boolean): Fetch module.json metadata (default: true)
+  - `integrity` (boolean): Verify SHA256 integrity (default: true)
+  - `validateCalls` (boolean): Validate function parameters (default: true)
 
 **Returns:** Promise<WasmBridge>
 
@@ -314,29 +305,29 @@ The bridge provides comprehensive functionality:
 
 #### `call(funcName, ...args)`
 
-Calls a WASM function synchronously. In v1.4.0, validates parameter count and types (debug mode) against module.json metadata.
+Calls a WASM function synchronously. Validates parameter count and types (debug mode) against module.json metadata.
 
 #### `callAsync(funcName, ...args)`
 
 Calls a WASM function asynchronously.
 
-#### `describe(funcName)` _(v1.4.0)_
+#### `describe(funcName)`
 
 Returns inline documentation for a function from module.json metadata.
 
 **Returns:** `{ name, description, category, parameters, returnType, example, errorPattern }` or `null`
 
-#### `getDetailedFunctions()` _(v1.4.0)_
+#### `getDetailedFunctions()`
 
 Returns all functions with their full metadata (parameters, types, descriptions).
 
 **Returns:** `Array<{ name, description, category, parameters, returnType, example }>`
 
-#### `getMetadata()` _(v1.4.0)_
+#### `getMetadata()`
 
 Returns the raw module.json metadata object.
 
-#### `getFunctionCategories()` _(v1.4.0)_
+#### `getFunctionCategories()`
 
 Returns function categories from metadata.
 
@@ -406,14 +397,14 @@ Gets comprehensive module statistics.
 - `testAll()`: Test all loaded modules
 - `getHelp()`: Get comprehensive help information
 - `getVersion()`: Get GoWM version string
-- `clearCache()`: Clear all cached WASM bytes _(v1.3.0)_
-- `getModuleMetadata(name)`: Get module.json metadata _(v1.4.0)_
-- `describeFunction(moduleName, funcName)`: Describe a function from metadata _(v1.4.0)_
-- `on(event, callback)`: Register event listener _(v1.1.1)_
-- `off(event, callback)`: Remove event listener _(v1.1.1)_
-- `once(event, callback)`: One-time event listener _(v1.1.1)_
-- `generateTypes(metadata, options)`: Generate TypeScript types _(v1.1.1)_
-- `generateTypesFromGitHub(repo, options)`: Generate types from GitHub _(v1.1.1)_
+- `clearCache()`: Clear all cached WASM bytes
+- `getModuleMetadata(name)`: Get module.json metadata
+- `describeFunction(moduleName, funcName)`: Describe a function from metadata
+- `on(event, callback)`: Register event listener _(v1.1.2)_
+- `off(event, callback)`: Remove event listener _(v1.1.2)_
+- `once(event, callback)`: One-time event listener _(v1.1.2)_
+- `generateTypes(metadata, options)`: Generate TypeScript types _(v1.1.2)_
+- `generateTypesFromGitHub(repo, options)`: Generate types from GitHub _(v1.1.2)_
 
 ## 🌐 Browser Usage
 
@@ -455,7 +446,7 @@ For browser environments, GoWM automatically optimizes for the browser:
 </script>
 ```
 
-## 📡 Event System _(v1.1.1)_
+## 📡 Event System _(v1.1.2)_
 
 Monitor module lifecycle with event listeners:
 
@@ -486,7 +477,7 @@ gowm.on("module:loaded", handler);
 gowm.off("module:loaded", handler);
 ```
 
-## ⚛️ React Hooks _(v1.1.1)_
+## ⚛️ React Hooks _(v1.1.2)_
 
 ```bash
 npm install gowm react
@@ -513,7 +504,7 @@ function Calculator() {
 }
 ```
 
-## 💚 Vue 3 Composables _(v1.1.1)_
+## 💚 Vue 3 Composables _(v1.1.2)_
 
 ```bash
 npm install gowm vue
@@ -540,7 +531,7 @@ const { bridge, loading, error, metadata, reload } = useWasmFromGitHub(
 </template>
 ```
 
-## 🔧 CLI _(v1.1.1)_
+## 🔧 CLI _(v1.1.2)_
 
 ```bash
 # List available modules in a repository
@@ -559,7 +550,7 @@ npx gowm verify ./main.wasm --integrity sha256-xxxxxxxxx
 npx gowm install benoitpetit/wasm-modules-repository math-wasm --dir ./wasm
 ```
 
-## 🏗️ Type Generator _(v1.1.1)_
+## 🏗️ Type Generator _(v1.1.2)_
 
 Generate TypeScript interfaces from `module.json`:
 
@@ -593,7 +584,7 @@ export interface MathWasmBridge extends WasmBridge {
 
 ## 🏗️ Architecture
 
-GoWM v1.1.1 features a clean architecture:
+GoWM v1.1.2 features a clean architecture:
 
 ```
 src/
@@ -612,7 +603,7 @@ types/
 └── vue.d.ts                   # Vue composables types
 ```
 
-### Key Improvements in v1.1.1
+### Key Improvements in v1.1.2
 
 - **Event System**: `on()` / `off()` / `once()` for module lifecycle events with memory warnings
 - **React Hooks**: `useWasm()` and `useWasmFromGitHub()` with auto-cleanup

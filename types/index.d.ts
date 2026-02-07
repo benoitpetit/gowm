@@ -1,5 +1,5 @@
 /**
- * GoWM - Go Wasm Manager TypeScript Definitions v1.1.1
+ * GoWM - Go Wasm Manager TypeScript Definitions v1.1.2
  * 
  * Comprehensive TypeScript definitions for GoWM package.
  * Provides type safety for loading and managing Go Wasm modules.
@@ -526,7 +526,7 @@ export declare class GoWM {
      */
     describeFunction(name: string, funcName: string): FunctionDescription | null;
 
-    // ──── Event System (v1.1.1) ────
+    // ──── Event System (v1.1.2) ────
 
     /**
      * Register an event listener
@@ -578,7 +578,7 @@ export declare function describeFunction(name: string, funcName: string): Functi
 export { WasmBridge as UnifiedWasmBridge };
 export { WasmLoader as UnifiedWasmLoader };
 
-// ──── Type Generator (v1.1.1) ────
+// ──── Type Generator (v1.1.2) ────
 
 export interface TypeGeneratorOptions {
     /** Custom interface name (default: derived from module name) */

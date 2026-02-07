@@ -232,8 +232,8 @@ console.log('Debug info:', JSON.stringify(stats, null, 2));
 
 ## 📜 Version History
 
-- **v1.1.0**: Loader and bridge system
-- **v1.x**: Legacy separate loader system (moved to `/legacy/`)
+- **v1.1.2**: Current version — Full feature set (loader, bridge, events, CLI, React/Vue hooks, type generator)
+- **v1.1.0**: Initial release — Loader and bridge system
 
 ## 🤝 Contributing
 
