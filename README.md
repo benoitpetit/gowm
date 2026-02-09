@@ -27,12 +27,8 @@
 - ⚛️ **React Hooks** - `useWasm()` and `useWasmFromGitHub()` hooks
 - 💚 **Vue Composables** - `useWasm()` and `useWasmFromGitHub()` composables
 - 🔧 **CLI** - `npx gowm list|info|types|verify|install`
-- 📡 **Event System** - `on()` / `off()` / `once()` for module lifecycle events
+- 📡 **Event System** - `on()` / `off()` / `once()` / `on('module:loaded')`, `on('module:error')`, `on('memory:warning')` with chaining for module lifecycle events
 - 🏗️ **Type Generator** - Generate TypeScript interfaces from `module.json`
-
-### 🆕 New in v1.1.2
-
-- 📡 **Event System** - `on('module:loaded')`, `on('module:error')`, `on('memory:warning')` with chaining
 - ⚛️ **React Hooks** - `import { useWasm } from 'gowm/react'` with auto-cleanup and reload
 - 💚 **Vue 3 Composables** - `import { useWasm } from 'gowm/vue'` with reactive refs and watch
 - 🔧 **CLI** - `npx gowm list|info|types|verify|install` for module discovery and management
@@ -153,7 +149,7 @@ example();
 
 ## 🔄 Loader System
 
-GoWM v1.1.2 features a loader system that handles all source types with a single API:
+GoWM features a loader system that handles all source types with a single API:
 
 ### Auto-Detection
 
@@ -400,11 +396,11 @@ Gets comprehensive module statistics.
 - `clearCache()`: Clear all cached WASM bytes
 - `getModuleMetadata(name)`: Get module.json metadata
 - `describeFunction(moduleName, funcName)`: Describe a function from metadata
-- `on(event, callback)`: Register event listener _(v1.1.2)_
-- `off(event, callback)`: Remove event listener _(v1.1.2)_
-- `once(event, callback)`: One-time event listener _(v1.1.2)_
-- `generateTypes(metadata, options)`: Generate TypeScript types _(v1.1.2)_
-- `generateTypesFromGitHub(repo, options)`: Generate types from GitHub _(v1.1.2)_
+- `on(event, callback)`: Register event listener
+- `off(event, callback)`: Remove event listener
+- `once(event, callback)`: One-time event listener
+- `generateTypes(metadata, options)`: Generate TypeScript types
+- `generateTypesFromGitHub(repo, options)`: Generate types from GitHub
 
 ## 🌐 Browser Usage
 
@@ -446,7 +442,7 @@ For browser environments, GoWM automatically optimizes for the browser:
 </script>
 ```
 
-## 📡 Event System _(v1.1.2)_
+## 📡 Event System
 
 Monitor module lifecycle with event listeners:
 
@@ -477,7 +473,7 @@ gowm.on("module:loaded", handler);
 gowm.off("module:loaded", handler);
 ```
 
-## ⚛️ React Hooks _(v1.1.2)_
+## ⚛️ React Hooks
 
 ```bash
 npm install gowm react
@@ -504,7 +500,7 @@ function Calculator() {
 }
 ```
 
-## 💚 Vue 3 Composables _(v1.1.2)_
+## 💚 Vue 3 Composables
 
 ```bash
 npm install gowm vue
@@ -531,7 +527,7 @@ const { bridge, loading, error, metadata, reload } = useWasmFromGitHub(
 </template>
 ```
 
-## 🔧 CLI _(v1.1.2)_
+## 🔧 CLI
 
 ```bash
 # List available modules in a repository
@@ -550,7 +546,7 @@ npx gowm verify ./main.wasm --integrity sha256-xxxxxxxxx
 npx gowm install benoitpetit/wasm-modules-repository math-wasm --dir ./wasm
 ```
 
-## 🏗️ Type Generator _(v1.1.2)_
+## 🏗️ Type Generator
 
 Generate TypeScript interfaces from `module.json`:
 
@@ -584,7 +580,7 @@ export interface MathWasmBridge extends WasmBridge {
 
 ## 🏗️ Architecture
 
-GoWM v1.1.2 features a clean architecture:
+GoWM features a clean architecture:
 
 ```
 src/
@@ -602,16 +598,6 @@ types/
 ├── react.d.ts                 # React hooks types
 └── vue.d.ts                   # Vue composables types
 ```
-
-### Key Improvements in v1.1.2
-
-- **Event System**: `on()` / `off()` / `once()` for module lifecycle events with memory warnings
-- **React Hooks**: `useWasm()` and `useWasmFromGitHub()` with auto-cleanup
-- **Vue 3 Composables**: Reactive refs with `watch()` support and auto-cleanup
-- **CLI**: 5 commands for module discovery, inspection, type generation, integrity, and installation
-- **Type Generator**: Generate TypeScript interfaces from `module.json` metadata
-- **ESM Exports Map**: Sub-path exports for `gowm/react`, `gowm/vue`, `gowm/tools/type-generator`
-- **274 Unit Tests**: Extended test coverage for all features
 
 ## 📊 Examples
 
