@@ -16,7 +16,6 @@ module.exports = {
     loadFromGitHub: gowm.loadFromGitHub.bind(gowm),
     loadFromUrl: gowm.loadFromUrl.bind(gowm),
     loadFromFile: gowm.loadFromFile.bind(gowm),
-    loadFromNPM: gowm.loadFromNPM.bind(gowm), // deprecated
     get: gowm.get.bind(gowm),
     unload: gowm.unload.bind(gowm),
     unloadAll: gowm.unloadAll.bind(gowm),

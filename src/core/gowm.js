@@ -464,21 +464,6 @@ class GoWM {
         await this.loader.clearCache(options);
         this._log('info', 'GoWM: Cache cleared');
     }
-
-    /**
-     * Legacy NPM loading (deprecated)
-     * @deprecated Use loadFromGitHub instead
-     */
-    async loadFromNPM(packageName, options = {}) {
-        this._log('warn', 'loadFromNPM is deprecated. Use loadFromGitHub instead.');
-
-        // Try to convert NPM package to potential GitHub repo
-        try {
-            return this.loadFromGitHub(packageName, options);
-        } catch (error) {
-            throw new Error(`Failed to load NPM package ${packageName}. Please use loadFromGitHub with a valid repository instead.`);
-        }
-    }
 }
 
 module.exports = GoWM;
