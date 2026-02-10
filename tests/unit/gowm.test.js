@@ -11,6 +11,19 @@ jest.mock('../../src/bridges/unified-bridge');
 
 describe('GoWM', () => {
     let gowm;
+    let consoleLogSpy;
+    let consoleWarnSpy;
+
+    beforeAll(() => {
+        // Suppress console.log and console.warn for cleaner test output
+        consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+        consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+    });
+
+    afterAll(() => {
+        consoleLogSpy.mockRestore();
+        consoleWarnSpy.mockRestore();
+    });
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -315,7 +328,7 @@ describe('GoWM', () => {
     });
 
     // =========================================================================
-    // Phase 3 — Metadata & describe Tests
+    //  — Metadata & describe Tests
     // =========================================================================
 
     describe('getModuleMetadata()', () => {

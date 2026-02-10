@@ -402,7 +402,7 @@ describe('UnifiedWasmBridge', () => {
     });
 
     // =========================================================================
-    // Phase 3 — Metadata, describe(), validation Tests
+    //  — Metadata, describe(), validation Tests
     // =========================================================================
 
     describe('constructor with metadata', () => {
@@ -588,7 +588,7 @@ describe('UnifiedWasmBridge', () => {
         });
     });
 
-    describe('_validateCall() (Phase 3.4)', () => {
+    describe('_validateCall()', () => {
         let bridgeWithValidation;
 
         beforeEach(() => {
@@ -728,7 +728,7 @@ describe('UnifiedWasmBridge', () => {
         });
     });
 
-    describe('getStats() with metadata (Phase 3)', () => {
+    describe('getStats() with metadata', () => {
         test('should include metadata in stats when available', () => {
             const metadata = {
                 name: 'math-wasm',

@@ -1,10 +1,20 @@
 /**
- * Tests for Phase 1.3: Standardized Error Codes
+ * Tests for  Standardized Error Codes
  * Tests the GoWMError class and error code standardization
  */
 
-describe('Phase 1.3: Standardized Error Codes', () => {
+describe(' Standardized Error Codes', () => {
     let UnifiedWasmBridge, GoWMError, ErrorCodes;
+    let consoleLogSpy;
+    
+    beforeAll(() => {
+        // Suppress console.log for cleaner test output
+        consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    });
+    
+    afterAll(() => {
+        consoleLogSpy.mockRestore();
+    });
     
     beforeEach(() => {
         jest.resetModules();

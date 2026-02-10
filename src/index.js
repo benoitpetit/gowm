@@ -3,7 +3,7 @@ const UnifiedWasmLoader = require('./loaders/unified-loader');
 const UnifiedWasmBridge = require('./bridges/unified-bridge');
 const { generateTypes, generateTypesFromGitHub } = require('./tools/type-generator');
 
-// Phase 1.3: Import error classes and codes
+// Import error classes and codes
 const { GoWMError, ErrorCodes } = UnifiedWasmBridge;
 
 // Create main instance
@@ -42,11 +42,11 @@ module.exports = {
     WasmLoader: UnifiedWasmLoader,
     WasmBridge: UnifiedWasmBridge,
 
-    // Type generator (Phase 4)
+    // Type generator
     generateTypes,
     generateTypesFromGitHub,
 
-    // Phase 1.3: Error handling
+    // Error handling
     GoWMError,
     ErrorCodes,
 

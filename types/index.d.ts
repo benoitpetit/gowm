@@ -83,7 +83,7 @@ export interface WasmModule {
     ready: boolean;
     /** Module identifier for namespace isolation */
     moduleId?: string;
-    /** Module metadata from module.json (Phase 3) */
+    /** Module metadata from module.json */
     metadata?: ModuleMetadata | null;
 }
 

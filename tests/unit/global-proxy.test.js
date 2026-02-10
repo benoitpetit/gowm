@@ -1,9 +1,9 @@
 /**
- * Tests for Phase 1.1: Global Proxy Virtualization
+ * Tests for  Global Proxy Virtualization
  * Tests the Proxy-based isolation of global functions to prevent namespace conflicts
  */
 
-describe('Phase 1.1: Global Proxy Virtualization', () => {
+describe(' Global Proxy Virtualization', () => {
     let UnifiedWasmLoader;
     
     beforeEach(() => {

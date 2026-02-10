@@ -1,5 +1,5 @@
 /**
- * Unit tests for GoWM React Hooks (Phase 4.6)
+ * Unit tests for GoWM React Hooks
  * Tests the hook logic without a full React rendering environment.
  */
 
@@ -45,7 +45,7 @@ jest.mock('../../src/core/gowm', () => {
     }));
 });
 
-describe('React Hooks (Phase 4.6)', () => {
+describe('React Hooks', () => {
     let reactHooks;
 
     beforeEach(() => {

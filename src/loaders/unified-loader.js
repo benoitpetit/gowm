@@ -3,7 +3,7 @@
  * Supports loading from local files, HTTP URLs, and GitHub repositories
  * Works in both Node.js and browser environments
  * 
- * @version 1.1.2
+ * @version 1.3.0
  * Features:
  * - Auto-download and parse module.json metadata from GitHub repos
  * - SHA256 integrity verification via .wasm.integrity files
@@ -18,6 +18,8 @@
  * - Fixed source detection (local paths no longer misidentified as GitHub repos)
  * - Auto-detect default branch via GitHub API (fallback: main → master)
  * - Module namespace isolation via __gowm_modules_ prefix
+ * -  Web Worker support for non-blocking execution
+ * -  SharedArrayBuffer support for zero-copy memory transfers
  */
 class UnifiedWasmLoader {
     constructor(options = {}) {
@@ -25,11 +27,15 @@ class UnifiedWasmLoader {
         this.isNode = typeof window === 'undefined';
         this.nodeModulesLoaded = false;
         
-        // Phase 1.1: Global proxy virtualization (opt-in for backward compatibility)
+        //  Global proxy virtualization (opt-in for backward compatibility)
         this._useGlobalProxy = options.useGlobalProxy || false;
         
         // Cache for GitHub default branches
         this._defaultBranchCache = new Map();
+        
+        //  Worker management
+        this._workerManager = null;
+        this._workersEnabled = options.enableWorkers !== false && !this.isNode;
 
         // L1 Cache: in-memory WASM bytes (Map<cacheKey, {bytes, timestamp}>)
         this._wasmBytesCache = new Map();
@@ -52,7 +58,7 @@ class UnifiedWasmLoader {
         // Module metadata cache (Map<moduleId, moduleJsonData>)
         this._metadataCache = new Map();
 
-        // Phase 1.2: Runtime version cache (Map<version, runtimePath>)
+        //  Runtime version cache (Map<version, runtimePath>)
         this._runtimeCache = new Map();
 
         // Node.js modules will be imported dynamically when needed
@@ -107,7 +113,7 @@ class UnifiedWasmLoader {
         }
 
         try {
-            // Phase 1.2: Load wasm_exec.js with version support if necessary
+            //  Load wasm_exec.js with version support if necessary
             if (!globalThis.Go) {
                 await this.loadGoRuntime(
                     options.goRuntimePath, 
@@ -118,7 +124,7 @@ class UnifiedWasmLoader {
 
             const go = new globalThis.Go();
             
-            // Phase 1.1: Apply global proxy if enabled (opt-in for backward compatibility)
+            //  Apply global proxy if enabled (opt-in for backward compatibility)
             if (this._useGlobalProxy || options.useGlobalProxy) {
                 go.global = this._createGlobalProxy(moduleId);
             }
@@ -142,7 +148,7 @@ class UnifiedWasmLoader {
                 // Capture globalThis keys before Go starts to detect new functions
                 const keysBefore = new Set(Object.keys(globalThis));
 
-                // Auto-discover readySignal from module.json metadata (Phase 3.3)
+                // Auto-discover readySignal from module.json metadata
                 const metadata = this._metadataCache.get(moduleId);
                 const readySignal = metadata?.gowmConfig?.readySignal || null;
 
@@ -176,6 +182,72 @@ class UnifiedWasmLoader {
         } catch (error) {
             throw new Error(`Failed to load WASM module ${moduleId}: ${error.message}`);
         }
+    }
+
+    /**
+     *  Load a WASM module in a Web Worker (non-blocking)
+     * Prevents UI freezing during heavy computations
+     * @param {string} source - Module source (GitHub repo, URL, or path)
+     * @param {object} options - Loading options
+     * @returns {Promise<object>} Worker proxy with call() method
+     */
+    async loadInWorker(source, options = {}) {
+        if (this.isNode) {
+            throw new Error('Web Workers are not supported in Node.js environment');
+        }
+
+        if (!this._workersEnabled) {
+            throw new Error('Web Workers are disabled. Enable with enableWorkers option');
+        }
+
+        // Lazy load worker manager
+        if (!this._workerManager) {
+            // Import WasmWorkerManager
+            if (typeof WasmWorkerManager === 'undefined') {
+                throw new Error('WasmWorkerManager not available. Include wasm-worker.js');
+            }
+            this._workerManager = new WasmWorkerManager({
+                debug: options.debug || false,
+                maxWorkers: options.maxWorkers || 4
+            });
+        }
+
+        const moduleId = options.name || this.extractModuleId(source);
+
+        // Create worker
+        const workerId = await this._workerManager.createWorker(moduleId, source, options);
+
+        // Return proxy object that implements the same interface as regular module
+        return {
+            workerId: workerId,
+            moduleId: moduleId,
+            ready: true,
+            inWorker: true,
+            
+            /**
+             * Call a function in the worker
+             * @param {string} functionName - Function to call
+             * @param {...any} args - Function arguments
+             * @returns {Promise<any>} Function result
+             */
+            call: async (functionName, ...args) => {
+                return this._workerManager.callWorkerFunction(workerId, functionName, args, options);
+            },
+
+            /**
+             * Terminate the worker
+             */
+            terminate: () => {
+                this._workerManager.terminateWorker(workerId);
+            },
+
+            /**
+             * Get worker status
+             */
+            getStatus: () => {
+                return this._workerManager.getWorkerStatus(workerId);
+            }
+        };
     }
 
     /**
@@ -213,7 +285,7 @@ class UnifiedWasmLoader {
     }
 
     /**
-     * Phase 1.1: Create a virtualized global environment using Proxy
+     *  Create a virtualized global environment using Proxy
      * This proxy intercepts writes to globalThis and redirects function registrations
      * to the module's isolated namespace, preventing naming conflicts.
      * @param {string} moduleId - Module identifier
@@ -702,7 +774,7 @@ class UnifiedWasmLoader {
      * checked during polling for faster detection.
      * @param {string} moduleId - Module identifier
      * @param {number} timeout - Timeout in milliseconds
-     * @param {string|null} readySignal - Custom readySignal from module.json (Phase 3.3)
+     * @param {string|null} readySignal - Custom readySignal from module.json
      * @returns {Promise<void>}
      */
     async waitForReady(moduleId, timeout = 15000, readySignal = null) {
@@ -746,7 +818,7 @@ class UnifiedWasmLoader {
                     moduleReady: globalThis[`__${moduleId}_ready`] === true
                 };
 
-                // Phase 3.3: Check custom readySignal from module.json
+                //  Check custom readySignal from module.json
                 if (readySignal && globalThis[readySignal] === true) {
                     signals.metadataReady = true;
                 }
@@ -771,7 +843,7 @@ class UnifiedWasmLoader {
     }
 
     /**
-     * Phase 1.2: Load Go runtime (wasm_exec.js) with version support
+     *  Load Go runtime (wasm_exec.js) with version support
      * @param {string} customPath - Custom path to runtime
      * @param {string} goVersion - Go version (e.g., 'go1.21.4')
      * @param {string} moduleId - Module ID for metadata lookup
@@ -779,7 +851,7 @@ class UnifiedWasmLoader {
     async loadGoRuntime(customPath, goVersion, moduleId) {
         await this.ensureNodeModules();
         
-        // Phase 1.2: If goVersion is specified, download the corresponding runtime
+        //  If goVersion is specified, download the corresponding runtime
         if (goVersion && !customPath) {
             try {
                 customPath = await this._downloadGoRuntime(goVersion);
@@ -788,7 +860,7 @@ class UnifiedWasmLoader {
             }
         }
         
-        // Phase 1.2: Auto-detect goVersion from module.json metadata
+        //  Auto-detect goVersion from module.json metadata
         if (!goVersion && !customPath && moduleId) {
             const metadata = this._metadataCache.get(moduleId);
             if (metadata && metadata.goVersion) {
@@ -820,7 +892,7 @@ class UnifiedWasmLoader {
     }
 
     /**
-     * Phase 1.2: Download Go runtime for a specific version
+     *  Download Go runtime for a specific version
      * @param {string} goVersion - Go version (e.g., 'go1.21.4')
      * @returns {Promise<string>} Path to downloaded runtime
      */
@@ -1061,7 +1133,7 @@ class UnifiedWasmLoader {
     }
 
     // =========================================================================
-    // Retry with exponential backoff (Phase 2.4)
+    // Retry with exponential backoff
     // =========================================================================
 
     /**
@@ -1105,7 +1177,7 @@ class UnifiedWasmLoader {
     }
 
     // =========================================================================
-    // WebAssembly.instantiateStreaming (Phase 2.3)
+    // WebAssembly.instantiateStreaming
     // =========================================================================
 
     /**
@@ -1171,7 +1243,7 @@ class UnifiedWasmLoader {
     }
 
     // =========================================================================
-    // Compressed WASM support (Phase 2.6)
+    // Compressed WASM support
     // =========================================================================
 
     /**
@@ -1290,7 +1362,7 @@ class UnifiedWasmLoader {
     }
 
     // =========================================================================
-    // Multi-level cache (Phase 2.1)
+    // Multi-level cache
     // =========================================================================
 
     /**

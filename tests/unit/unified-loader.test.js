@@ -5,6 +5,16 @@ const UnifiedWasmLoader = require('../../src/loaders/unified-loader');
 
 describe('UnifiedWasmLoader', () => {
     let loader;
+    let consoleLogSpy;
+
+    beforeAll(() => {
+        // Suppress console.log for cleaner test output
+        consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    });
+
+    afterAll(() => {
+        consoleLogSpy.mockRestore();
+    });
 
     beforeEach(() => {
         loader = new UnifiedWasmLoader();
@@ -751,7 +761,7 @@ describe('UnifiedWasmLoader', () => {
     });
 
     // =========================================================================
-    // Phase 3 — Metadata & Integrity Tests
+    //  — Metadata & Integrity Tests
     // =========================================================================
 
     describe('Metadata cache (_metadataCache)', () => {
@@ -934,7 +944,7 @@ describe('UnifiedWasmLoader', () => {
         });
     });
 
-    describe('waitForReady() with readySignal parameter (Phase 3.3)', () => {
+    describe('waitForReady() with readySignal parameter', () => {
         afterEach(() => {
             delete globalThis.__gowm_ready;
             delete globalThis.__gowm_test_ready_callback;
@@ -964,7 +974,7 @@ describe('UnifiedWasmLoader', () => {
         });
     });
 
-    describe('loadFromGitHub() with metadata (Phase 3.1)', () => {
+    describe('loadFromGitHub() with metadata', () => {
         let originalFetch;
 
         beforeEach(() => {

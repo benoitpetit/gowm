@@ -1,5 +1,5 @@
 /**
- * Unit tests for GoWM Event System (Phase 4.3)
+ * Unit tests for GoWM Event System
  */
 const GoWM = require('../../src/core/gowm');
 const UnifiedWasmLoader = require('../../src/loaders/unified-loader');
@@ -8,8 +8,21 @@ const UnifiedWasmBridge = require('../../src/bridges/unified-bridge');
 jest.mock('../../src/loaders/unified-loader');
 jest.mock('../../src/bridges/unified-bridge');
 
-describe('GoWM Event System (Phase 4.3)', () => {
+describe('GoWM Event System', () => {
     let gowm;
+    let consoleLogSpy;
+    let consoleWarnSpy;
+
+    beforeAll(() => {
+        // Suppress console.log and console.warn for cleaner test output
+        consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+        consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+    });
+
+    afterAll(() => {
+        consoleLogSpy.mockRestore();
+        consoleWarnSpy.mockRestore();
+    });
 
     beforeEach(() => {
         jest.clearAllMocks();

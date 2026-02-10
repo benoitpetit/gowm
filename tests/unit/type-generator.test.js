@@ -1,9 +1,9 @@
 /**
- * Unit tests for GoWM Type Generator (Phase 4.4)
+ * Unit tests for GoWM Type Generator
  */
 const { generateTypes, mapType, toPascalCase } = require('../../src/tools/type-generator');
 
-describe('Type Generator (Phase 4.4)', () => {
+describe('Type Generator', () => {
 
     describe('toPascalCase()', () => {
         test('should convert kebab-case', () => {

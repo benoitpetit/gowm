@@ -12,11 +12,11 @@
  * - Error pattern detection from gowmConfig
  * - Namespace-aware function calls via __gowm_modules_[moduleId]
  * - Fixed allocateGoMemory (no longer uses unsafe offset calculation)
- * - Phase 1.3: Standardized error codes (GOWM_ERR_*)
+ * -  Standardized error codes (GOWM_ERR_*)
  */
 
 /**
- * Phase 1.3: Standardized GoWM Error
+ *  Standardized GoWM Error
  * Base error class with error codes for programmatic handling
  */
 class GoWMError extends Error {
@@ -31,7 +31,7 @@ class GoWMError extends Error {
 }
 
 /**
- * Phase 1.3: Error codes
+ *  Error codes
  */
 const ErrorCodes = {
     // Function call errors
@@ -65,14 +65,14 @@ class UnifiedWasmBridge {
         this.moduleId = wasmModule.moduleId || this.name;
         this.isNode = typeof window === 'undefined';
 
-        // Phase 3: Module metadata from module.json
+        //  Module metadata from module.json
         this._metadata = wasmModule.metadata || null;
         this._functionsMap = this._buildFunctionsMap();
         this._errorPattern = this._metadata?.gowmConfig?.errorPattern || null;
         this._validateCalls = options.validateCalls !== false;
         this._debugMode = options.logLevel === 'debug';
         
-        // Phase 1.3: Error codes export
+        //  Error codes export
         this.ErrorCodes = ErrorCodes;
     }
 
@@ -100,11 +100,11 @@ class UnifiedWasmBridge {
      * 2. Module namespace (globalThis.__gowm_modules_[moduleId][funcName])
      * 3. globalThis (backward compat for unnamespaced Go exports)
      * 
-     * When metadata is available (Phase 3.4), validates:
+     * When metadata is available, validates:
      * - Parameter count (throws if wrong count for fixed-arg functions)
      * - Parameter types (warns in debug mode)
      * 
-     * Phase 1.3: Throws GoWMError with standardized error codes
+     *  Throws GoWMError with standardized error codes
      * 
      * @param {string} funcName - Function name
      * @param {...any} args - Function arguments
@@ -112,7 +112,7 @@ class UnifiedWasmBridge {
      */
     call(funcName, ...args) {
         try {
-            // Phase 3.4: Validate function call using metadata
+            //  Validate function call using metadata
             if (this._validateCalls && this._functionsMap.size > 0) {
                 this._validateCall(funcName, args);
             }
@@ -135,7 +135,7 @@ class UnifiedWasmBridge {
                 return this._processResult(funcName, result);
             }
             
-            // Phase 1.3: Throw standardized error
+            //  Throw standardized error
             throw new GoWMError(
                 `Function ${funcName} not found in module '${this.moduleId}'`,
                 ErrorCodes.FUNCTION_NOT_FOUND,
@@ -159,7 +159,7 @@ class UnifiedWasmBridge {
     /**
      * Validate a function call against module.json metadata.
      * Checks parameter count and optionally warns about types.
-     * Phase 1.3: Throws GoWMError with INVALID_ARGUMENTS code
+     *  Throws GoWMError with INVALID_ARGUMENTS code
      * @param {string} funcName - Function name
      * @param {Array} args - Arguments passed
      * @private
@@ -251,7 +251,7 @@ class UnifiedWasmBridge {
 
     /**
      * Enhanced buffer management for data transfer
-     * Phase 1.3: Throws GoWMError with standardized error codes
+     *  Throws GoWMError with standardized error codes
      * @param {*} data - Data to create buffer from
      * @returns {object} Buffer info object
      */
@@ -345,7 +345,7 @@ class UnifiedWasmBridge {
 
     /**
      * Allocate memory in WASM module
-     * Phase 1.3: Throws GoWMError with standardized error codes
+     *  Throws GoWMError with standardized error codes
      * @param {number} size - Size in bytes
      * @returns {number|null} Memory pointer or null
      */
@@ -740,6 +740,218 @@ class UnifiedWasmBridge {
     }
 
     /**
+     *  Create a SharedArrayBuffer for zero-copy operations
+     * Allows direct memory sharing between main thread and workers
+     * @param {number} size - Size in bytes
+     * @returns {object} Shared buffer info with view and utilities
+     */
+    createSharedBuffer(size) {
+        if (typeof SharedArrayBuffer === 'undefined') {
+            throw new GoWMError(
+                'SharedArrayBuffer is not supported in this environment',
+                ErrorCodes.BUFFER_CREATION_FAILED,
+                { 
+                    reason: 'SharedArrayBuffer not available',
+                    help: 'Enable Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy headers'
+                }
+            );
+        }
+
+        if (size <= 0) {
+            throw new GoWMError(
+                'Invalid size for shared buffer',
+                ErrorCodes.INVALID_BUFFER_SIZE,
+                { size }
+            );
+        }
+
+        try {
+            const sharedBuffer = new SharedArrayBuffer(size);
+            const view = new Uint8Array(sharedBuffer);
+
+            const bufferInfo = {
+                buffer: sharedBuffer,
+                view: view,
+                size: size,
+                isShared: true,
+                
+                // Utility methods
+                write: (data, offset = 0) => {
+                    const dataArray = new Uint8Array(data);
+                    if (offset + dataArray.length > size) {
+                        throw new GoWMError(
+                            'Data exceeds shared buffer size',
+                            ErrorCodes.BUFFER_CREATION_FAILED,
+                            { dataSize: dataArray.length, bufferSize: size, offset }
+                        );
+                    }
+                    view.set(dataArray, offset);
+                    return offset + dataArray.length;
+                },
+                
+                read: (length, offset = 0) => {
+                    if (offset + length > size) {
+                        throw new GoWMError(
+                            'Read exceeds shared buffer size',
+                            ErrorCodes.BUFFER_CREATION_FAILED,
+                            { requestedLength: length, bufferSize: size, offset }
+                        );
+                    }
+                    return view.slice(offset, offset + length);
+                },
+                
+                clear: () => {
+                    view.fill(0);
+                },
+                
+                // No free() needed for SharedArrayBuffer (GC managed)
+                free: () => {
+                    // SharedArrayBuffer is GC managed, nothing to free
+                }
+            };
+
+            return bufferInfo;
+
+        } catch (error) {
+            if (error instanceof GoWMError) {
+                throw error;
+            }
+            
+            throw new GoWMError(
+                `Failed to create shared buffer: ${error.message}`,
+                ErrorCodes.BUFFER_CREATION_FAILED,
+                { originalError: error, size }
+            );
+        }
+    }
+
+    /**
+     * Free a buffer from memory
+     * @param {number} ptr - Pointer to free
+     * @param {number} length - Length of buffer
+     */
+    freeBuffer(ptr, length) {
+        // In WebAssembly, we typically don't have a direct free() equivalent
+        // unless the module exports one. This is a placeholder for custom allocators.
+        if (this.module.exports && this.module.exports.free) {
+            this.module.exports.free(ptr);
+        } else if (this.module.exports && this.module.exports.__gowm_free) {
+            this.module.exports.__gowm_free(ptr, length);
+        }
+        // If no free method available, memory will be freed when module is unloaded
+    }
+
+    /**
+     *  Check if SharedArrayBuffer is supported
+     * @returns {boolean} Whether SharedArrayBuffer is available
+     */
+    isSharedArrayBufferSupported() {
+        return typeof SharedArrayBuffer !== 'undefined';
+    }
+
+    /**
+     *  Create a buffer from SharedArrayBuffer for WASM access
+     * Maps a SharedArrayBuffer into WASM memory space
+     * @param {SharedArrayBuffer} sharedBuffer - The shared buffer to map
+     * @param {number} offset - Offset in shared buffer
+     * @param {number} length - Length to map
+     * @returns {object} Buffer info with WASM pointer
+     */
+    mapSharedBuffer(sharedBuffer, offset = 0, length = null) {
+        if (!(sharedBuffer instanceof SharedArrayBuffer)) {
+            throw new GoWMError(
+                'Invalid buffer: expected SharedArrayBuffer',
+                ErrorCodes.INVALID_ARGUMENTS,
+                { actualType: typeof sharedBuffer }
+            );
+        }
+
+        const totalSize = sharedBuffer.byteLength;
+        const mapLength = length || (totalSize - offset);
+
+        if (offset + mapLength > totalSize) {
+            throw new GoWMError(
+                'Mapping exceeds shared buffer size',
+                ErrorCodes.BUFFER_CREATION_FAILED,
+                { offset, length: mapLength, totalSize }
+            );
+        }
+
+        try {
+            // Create a view of the shared buffer
+            const view = new Uint8Array(sharedBuffer, offset, mapLength);
+
+            // Allocate WASM memory if needed
+            let ptr = null;
+            const memory = this.module.exports?.memory || this.module.instance?.exports?.memory;
+            
+            if (memory) {
+                ptr = this.allocateWasmMemory(mapLength);
+                if (ptr) {
+                    const wasmBuffer = new Uint8Array(memory.buffer, ptr, mapLength);
+                    wasmBuffer.set(view);
+                }
+            }
+            
+            // Fallback to Go memory allocation if WASM memory allocation failed
+            if (!ptr && this.module.go && this.module.go.mem) {
+                ptr = this.allocateGoMemory(mapLength);
+                if (ptr) {
+                    const goBuffer = new Uint8Array(this.module.go.mem.buffer, ptr, mapLength);
+                    goBuffer.set(view);
+                }
+            }
+
+            const bufferInfo = {
+                ptr,
+                buffer: view,
+                size: mapLength,
+                sharedBuffer: sharedBuffer,
+                offset: offset,
+                isShared: true,
+                
+                // Sync back to shared buffer (copy from WASM to SharedArrayBuffer)
+                sync: () => {
+                    if (ptr) {
+                        let wasmView;
+                        const memory = this.module.exports?.memory || this.module.instance?.exports?.memory;
+                        if (memory) {
+                            wasmView = new Uint8Array(memory.buffer, ptr, mapLength);
+                        } else if (this.module.go && this.module.go.mem) {
+                            wasmView = new Uint8Array(this.module.go.mem.buffer, ptr, mapLength);
+                        }
+                        if (wasmView) {
+                            // Copy modified data from WASM memory to shared buffer
+                            const targetView = new Uint8Array(sharedBuffer, offset, mapLength);
+                            targetView.set(wasmView);
+                        }
+                    }
+                },
+                
+                free: () => {
+                    if (ptr) {
+                        this.freeBuffer(ptr, mapLength);
+                    }
+                }
+            };
+
+            this.allocatedBuffers.add(bufferInfo);
+            return bufferInfo;
+
+        } catch (error) {
+            if (error instanceof GoWMError) {
+                throw error;
+            }
+            
+            throw new GoWMError(
+                `Failed to map shared buffer: ${error.message}`,
+                ErrorCodes.BUFFER_CREATION_FAILED,
+                { originalError: error }
+            );
+        }
+    }
+
+    /**
      * Cleanup method to release resources and remove namespace
      */
     cleanup() {
@@ -747,7 +959,13 @@ class UnifiedWasmBridge {
             // Free all allocated buffers
             for (const bufferInfo of this.allocatedBuffers) {
                 try {
-                    bufferInfo.free();
+                    if (bufferInfo.isShared && bufferInfo.ptr) {
+                        // For shared buffers, call freeBuffer directly
+                        this.freeBuffer(bufferInfo.ptr, bufferInfo.size);
+                    } else if (bufferInfo.free && typeof bufferInfo.free === 'function') {
+                        // For other buffer types with free method
+                        bufferInfo.free();
+                    }
                 } catch (error) {
                     // Ignore buffer cleanup errors
                 }
@@ -839,7 +1057,7 @@ class UnifiedWasmBridge {
 // Export for both CommonJS and ES modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = UnifiedWasmBridge;
-    // Phase 1.3: Export error classes and codes
+    //  Export error classes and codes
     module.exports.GoWMError = GoWMError;
     module.exports.ErrorCodes = ErrorCodes;
 } else {

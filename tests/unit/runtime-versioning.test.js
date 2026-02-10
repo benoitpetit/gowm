@@ -1,10 +1,20 @@
 /**
- * Tests for Phase 1.2: Dynamic Runtime Versioning
+ * Tests for  Dynamic Runtime Versioning
  * Tests the ability to download and use version-specific wasm_exec.js runtimes
  */
 
-describe('Phase 1.2: Dynamic Runtime Versioning', () => {
+describe(' Dynamic Runtime Versioning', () => {
     let UnifiedWasmLoader;
+    let consoleWarnSpy;
+    
+    beforeAll(() => {
+        // Suppress console.warn for cleaner test output
+        consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+    });
+    
+    afterAll(() => {
+        consoleWarnSpy.mockRestore();
+    });
     
     beforeEach(() => {
         jest.resetModules();
