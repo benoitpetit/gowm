@@ -3,6 +3,9 @@ const UnifiedWasmLoader = require('./loaders/unified-loader');
 const UnifiedWasmBridge = require('./bridges/unified-bridge');
 const { generateTypes, generateTypesFromGitHub } = require('./tools/type-generator');
 
+// Phase 1.3: Import error classes and codes
+const { GoWMError, ErrorCodes } = UnifiedWasmBridge;
+
 // Create main instance
 const gowm = new GoWM();
 
@@ -16,6 +19,7 @@ module.exports = {
     loadFromGitHub: gowm.loadFromGitHub.bind(gowm),
     loadFromUrl: gowm.loadFromUrl.bind(gowm),
     loadFromFile: gowm.loadFromFile.bind(gowm),
+    loadFromNPM: gowm.loadFromNPM.bind(gowm), // deprecated
     get: gowm.get.bind(gowm),
     unload: gowm.unload.bind(gowm),
     unloadAll: gowm.unloadAll.bind(gowm),
@@ -41,6 +45,10 @@ module.exports = {
     // Type generator (Phase 4)
     generateTypes,
     generateTypesFromGitHub,
+
+    // Phase 1.3: Error handling
+    GoWMError,
+    ErrorCodes,
 
     // Version info (from package.json)
     version: require('../package.json').version,

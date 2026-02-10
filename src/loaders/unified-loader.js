@@ -20,10 +20,13 @@
  * - Module namespace isolation via __gowm_modules_ prefix
  */
 class UnifiedWasmLoader {
-    constructor() {
+    constructor(options = {}) {
         this.modules = new Map();
         this.isNode = typeof window === 'undefined';
         this.nodeModulesLoaded = false;
+        
+        // Phase 1.1: Global proxy virtualization (opt-in for backward compatibility)
+        this._useGlobalProxy = options.useGlobalProxy || false;
         
         // Cache for GitHub default branches
         this._defaultBranchCache = new Map();
@@ -48,6 +51,9 @@ class UnifiedWasmLoader {
 
         // Module metadata cache (Map<moduleId, moduleJsonData>)
         this._metadataCache = new Map();
+
+        // Phase 1.2: Runtime version cache (Map<version, runtimePath>)
+        this._runtimeCache = new Map();
 
         // Node.js modules will be imported dynamically when needed
         this.fs = null;
@@ -101,12 +107,22 @@ class UnifiedWasmLoader {
         }
 
         try {
-            // Load wasm_exec.js if necessary
+            // Phase 1.2: Load wasm_exec.js with version support if necessary
             if (!globalThis.Go) {
-                await this.loadGoRuntime(options.goRuntimePath);
+                await this.loadGoRuntime(
+                    options.goRuntimePath, 
+                    options.goVersion, 
+                    moduleId
+                );
             }
 
             const go = new globalThis.Go();
+            
+            // Phase 1.1: Apply global proxy if enabled (opt-in for backward compatibility)
+            if (this._useGlobalProxy || options.useGlobalProxy) {
+                go.global = this._createGlobalProxy(moduleId);
+            }
+            
             let result;
 
             // Use instantiateStreaming for HTTP sources when not cached
@@ -194,6 +210,57 @@ class UnifiedWasmLoader {
                 globalThis.__gowm_modules_[moduleId][key] = value;
             }
         }
+    }
+
+    /**
+     * Phase 1.1: Create a virtualized global environment using Proxy
+     * This proxy intercepts writes to globalThis and redirects function registrations
+     * to the module's isolated namespace, preventing naming conflicts.
+     * @param {string} moduleId - Module identifier
+     * @returns {Proxy} Proxied global object
+     */
+    _createGlobalProxy(moduleId) {
+        // Initialize namespace if not exists
+        if (!globalThis.__gowm_modules_) {
+            globalThis.__gowm_modules_ = {};
+        }
+        if (!globalThis.__gowm_modules_[moduleId]) {
+            globalThis.__gowm_modules_[moduleId] = {};
+        }
+
+        const namespace = globalThis.__gowm_modules_[moduleId];
+        const internalPrefixes = ['__gowm_', 'go:', 'gojs'];
+
+        return new Proxy(globalThis, {
+            set(target, prop, value) {
+                // Skip internal properties and Go runtime internals
+                const propStr = String(prop);
+                if (internalPrefixes.some(prefix => propStr.startsWith(prefix))) {
+                    return Reflect.set(target, prop, value);
+                }
+                if (propStr.startsWith('__') && propStr.endsWith('_ready')) {
+                    return Reflect.set(target, prop, value);
+                }
+
+                // Intercept function registrations and redirect to namespace
+                if (typeof value === 'function') {
+                    namespace[prop] = value;
+                    // Also set on globalThis for backward compatibility
+                    return Reflect.set(target, prop, value);
+                }
+
+                // Allow other property types to pass through
+                return Reflect.set(target, prop, value);
+            },
+            get(target, prop) {
+                // First check the namespace for module-specific functions
+                if (namespace[prop] !== undefined) {
+                    return namespace[prop];
+                }
+                // Fallback to globalThis
+                return Reflect.get(target, prop);
+            }
+        });
     }
 
     /**
@@ -704,11 +771,34 @@ class UnifiedWasmLoader {
     }
 
     /**
-     * Load Go runtime (wasm_exec.js)
+     * Phase 1.2: Load Go runtime (wasm_exec.js) with version support
      * @param {string} customPath - Custom path to runtime
+     * @param {string} goVersion - Go version (e.g., 'go1.21.4')
+     * @param {string} moduleId - Module ID for metadata lookup
      */
-    async loadGoRuntime(customPath) {
+    async loadGoRuntime(customPath, goVersion, moduleId) {
         await this.ensureNodeModules();
+        
+        // Phase 1.2: If goVersion is specified, download the corresponding runtime
+        if (goVersion && !customPath) {
+            try {
+                customPath = await this._downloadGoRuntime(goVersion);
+            } catch (error) {
+                console.warn(`Failed to download Go runtime for ${goVersion}, using default: ${error.message}`);
+            }
+        }
+        
+        // Phase 1.2: Auto-detect goVersion from module.json metadata
+        if (!goVersion && !customPath && moduleId) {
+            const metadata = this._metadataCache.get(moduleId);
+            if (metadata && metadata.goVersion) {
+                try {
+                    customPath = await this._downloadGoRuntime(metadata.goVersion);
+                } catch (error) {
+                    console.warn(`Failed to download Go runtime for ${metadata.goVersion}, using default: ${error.message}`);
+                }
+            }
+        }
         
         const runtimePath = customPath || this.getDefaultRuntimePath();
 
@@ -726,6 +816,55 @@ class UnifiedWasmLoader {
             }
         } else {
             await this.loadScript(runtimePath);
+        }
+    }
+
+    /**
+     * Phase 1.2: Download Go runtime for a specific version
+     * @param {string} goVersion - Go version (e.g., 'go1.21.4')
+     * @returns {Promise<string>} Path to downloaded runtime
+     */
+    async _downloadGoRuntime(goVersion) {
+        // Ensure Node modules are loaded
+        await this.ensureNodeModules();
+        
+        // Check cache first
+        const cacheKey = `go_runtime_${goVersion}`;
+        if (this._runtimeCache.has(cacheKey)) {
+            return this._runtimeCache.get(cacheKey);
+        }
+
+        // Download from GitHub
+        const url = `https://raw.githubusercontent.com/golang/go/${goVersion}/misc/wasm/wasm_exec.js`;
+        
+        try {
+            await this.ensureFetch();
+            const response = await this.fetchWithRetry(url, {});
+            
+            if (!response.ok) {
+                throw new Error(`Failed to download runtime: ${response.status} ${response.statusText}`);
+            }
+            
+            const runtimeCode = await response.text();
+            
+            if (this.isNode) {
+                // Save to temporary file in Node.js
+                const os = this.os || this.dynamicRequire('os');
+                const tempDir = os.tmpdir();
+                const tempPath = this.path.join(tempDir, `gowm_runtime_${goVersion}.js`);
+                
+                this.fs.writeFileSync(tempPath, runtimeCode, 'utf8');
+                this._runtimeCache.set(cacheKey, tempPath);
+                return tempPath;
+            } else {
+                // In browser, create a blob URL
+                const blob = new Blob([runtimeCode], { type: 'application/javascript' });
+                const blobUrl = URL.createObjectURL(blob);
+                this._runtimeCache.set(cacheKey, blobUrl);
+                return blobUrl;
+            }
+        } catch (error) {
+            throw new Error(`Failed to download Go runtime for ${goVersion}: ${error.message}`);
         }
     }
 

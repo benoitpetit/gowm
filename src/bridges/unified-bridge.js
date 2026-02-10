@@ -3,7 +3,7 @@
  * Provides interface between JavaScript and WASM modules
  * Works in both Node.js and browser environments
  * 
- * @version 1.1.2
+ * @version 1.2.0
  * Features:
  * - describe(funcName) for inline documentation from module.json
  * - getDetailedFunctions() returns functions with metadata
@@ -12,7 +12,50 @@
  * - Error pattern detection from gowmConfig
  * - Namespace-aware function calls via __gowm_modules_[moduleId]
  * - Fixed allocateGoMemory (no longer uses unsafe offset calculation)
+ * - Phase 1.3: Standardized error codes (GOWM_ERR_*)
  */
+
+/**
+ * Phase 1.3: Standardized GoWM Error
+ * Base error class with error codes for programmatic handling
+ */
+class GoWMError extends Error {
+    constructor(message, code, context = {}) {
+        super(message);
+        this.name = 'GoWMError';
+        this.code = code;
+        this.context = context;
+        this.timestamp = new Date().toISOString();
+        Error.captureStackTrace(this, this.constructor);
+    }
+}
+
+/**
+ * Phase 1.3: Error codes
+ */
+const ErrorCodes = {
+    // Function call errors
+    FUNCTION_NOT_FOUND: 'GOWM_ERR_FUNCTION_NOT_FOUND',
+    FUNCTION_CALL_FAILED: 'GOWM_ERR_FUNCTION_CALL_FAILED',
+    INVALID_ARGUMENTS: 'GOWM_ERR_INVALID_ARGUMENTS',
+    
+    // Memory errors
+    MEMORY_ALLOCATION_FAILED: 'GOWM_ERR_MEMORY_ALLOCATION_FAILED',
+    BUFFER_CREATION_FAILED: 'GOWM_ERR_BUFFER_CREATION_FAILED',
+    INVALID_BUFFER_SIZE: 'GOWM_ERR_INVALID_BUFFER_SIZE',
+    
+    // Module errors
+    MODULE_NOT_LOADED: 'GOWM_ERR_MODULE_NOT_LOADED',
+    MODULE_NOT_READY: 'GOWM_ERR_MODULE_NOT_READY',
+    
+    // Network errors
+    NETWORK_ERROR: 'GOWM_ERR_NETWORK',
+    DOWNLOAD_FAILED: 'GOWM_ERR_DOWNLOAD_FAILED',
+    
+    // Generic error
+    UNKNOWN: 'GOWM_ERR_UNKNOWN'
+};
+
 class UnifiedWasmBridge {
     constructor(wasmModule, options = {}) {
         this.module = wasmModule;
@@ -28,6 +71,9 @@ class UnifiedWasmBridge {
         this._errorPattern = this._metadata?.gowmConfig?.errorPattern || null;
         this._validateCalls = options.validateCalls !== false;
         this._debugMode = options.logLevel === 'debug';
+        
+        // Phase 1.3: Error codes export
+        this.ErrorCodes = ErrorCodes;
     }
 
     /**
@@ -58,6 +104,8 @@ class UnifiedWasmBridge {
      * - Parameter count (throws if wrong count for fixed-arg functions)
      * - Parameter types (warns in debug mode)
      * 
+     * Phase 1.3: Throws GoWMError with standardized error codes
+     * 
      * @param {string} funcName - Function name
      * @param {...any} args - Function arguments
      * @returns {any} Function result
@@ -86,19 +134,32 @@ class UnifiedWasmBridge {
                 const result = globalThis[funcName](...args);
                 return this._processResult(funcName, result);
             }
-            throw new Error(`Function ${funcName} not found in module '${this.moduleId}'`);
+            
+            // Phase 1.3: Throw standardized error
+            throw new GoWMError(
+                `Function ${funcName} not found in module '${this.moduleId}'`,
+                ErrorCodes.FUNCTION_NOT_FOUND,
+                { funcName, moduleId: this.moduleId }
+            );
         } catch (error) {
-            if (error.message.startsWith('Function ') && error.message.includes('not found')) {
+            // Re-throw GoWMError as-is
+            if (error instanceof GoWMError) {
                 throw error;
             }
-            const errorMsg = `Error calling ${funcName}: ${error.message}`;
-            throw new Error(errorMsg);
+            
+            // Wrap other errors in GoWMError
+            throw new GoWMError(
+                `Error calling ${funcName}: ${error.message}`,
+                ErrorCodes.FUNCTION_CALL_FAILED,
+                { funcName, moduleId: this.moduleId, originalError: error }
+            );
         }
     }
 
     /**
      * Validate a function call against module.json metadata.
      * Checks parameter count and optionally warns about types.
+     * Phase 1.3: Throws GoWMError with INVALID_ARGUMENTS code
      * @param {string} funcName - Function name
      * @param {Array} args - Arguments passed
      * @private
@@ -118,9 +179,16 @@ class UnifiedWasmBridge {
         );
 
         if (args.length < requiredParams.length) {
-            throw new Error(
+            throw new GoWMError(
                 `${funcName}() expects at least ${requiredParams.length} argument(s) ` +
-                `(${requiredParams.map(p => p.name).join(', ')}), but got ${args.length}`
+                `(${requiredParams.map(p => p.name).join(', ')}), but got ${args.length}`,
+                ErrorCodes.INVALID_ARGUMENTS,
+                { 
+                    funcName, 
+                    expected: requiredParams.length, 
+                    actual: args.length,
+                    requiredParams: requiredParams.map(p => p.name)
+                }
             );
         }
 
@@ -183,12 +251,17 @@ class UnifiedWasmBridge {
 
     /**
      * Enhanced buffer management for data transfer
+     * Phase 1.3: Throws GoWMError with standardized error codes
      * @param {*} data - Data to create buffer from
      * @returns {object} Buffer info object
      */
     createBuffer(data) {
         if (!data) {
-            throw new Error('Data is required for buffer creation');
+            throw new GoWMError(
+                'Data is required for buffer creation',
+                ErrorCodes.BUFFER_CREATION_FAILED,
+                { data }
+            );
         }
 
         let buffer, ptr, size;
@@ -209,7 +282,11 @@ class UnifiedWasmBridge {
                 buffer = new Float64Array(data);
                 size = buffer.length * buffer.BYTES_PER_ELEMENT;
             } else {
-                throw new Error('Unsupported data type. Supported: Float64Array, Uint8Array, string, Array');
+                throw new GoWMError(
+                    'Unsupported data type. Supported: Float64Array, Uint8Array, string, Array',
+                    ErrorCodes.BUFFER_CREATION_FAILED,
+                    { dataType: typeof data, data }
+                );
             }
 
             // Try WASM memory allocation if available
@@ -253,18 +330,32 @@ class UnifiedWasmBridge {
             return bufferInfo;
 
         } catch (error) {
-            throw new Error(`Failed to create buffer: ${error.message}`);
+            // Re-throw GoWMError as-is
+            if (error instanceof GoWMError) {
+                throw error;
+            }
+            
+            throw new GoWMError(
+                `Failed to create buffer: ${error.message}`,
+                ErrorCodes.BUFFER_CREATION_FAILED,
+                { originalError: error, dataType: typeof data }
+            );
         }
     }
 
     /**
      * Allocate memory in WASM module
+     * Phase 1.3: Throws GoWMError with standardized error codes
      * @param {number} size - Size in bytes
      * @returns {number|null} Memory pointer or null
      */
     allocateWasmMemory(size) {
         if (size <= 0) {
-            throw new Error('Invalid size for memory allocation');
+            throw new GoWMError(
+                'Invalid size for memory allocation',
+                ErrorCodes.INVALID_BUFFER_SIZE,
+                { size }
+            );
         }
 
         try {
@@ -748,6 +839,9 @@ class UnifiedWasmBridge {
 // Export for both CommonJS and ES modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = UnifiedWasmBridge;
+    // Phase 1.3: Export error classes and codes
+    module.exports.GoWMError = GoWMError;
+    module.exports.ErrorCodes = ErrorCodes;
 } else {
     window.UnifiedWasmBridge = UnifiedWasmBridge;
 } 

@@ -31,6 +31,8 @@ export const {
     WasmBridge,
     generateTypes,
     generateTypesFromGitHub,
+    GoWMError,
+    ErrorCodes,
     version,
     create
 } = gowmModule;

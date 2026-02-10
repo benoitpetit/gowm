@@ -151,6 +151,18 @@ class GoWM {
     }
 
     /**
+     * Load a WASM module from NPM package (deprecated - redirects to GitHub)
+     * @deprecated Use loadFromGitHub instead
+     * @param {string} githubRepo - GitHub repository
+     * @param {object} options - Loading options
+     * @returns {Promise<UnifiedWasmBridge>} Module bridge
+     */
+    async loadFromNPM(githubRepo, options = {}) {
+        this._log('warn', 'loadFromNPM is deprecated. Use loadFromGitHub instead.');
+        return this.loadFromGitHub(githubRepo, options);
+    }
+
+    /**
      * Get a loaded module bridge by name
      * @param {string} name - Module name (default: 'default')
      * @returns {UnifiedWasmBridge|null} Module bridge or null
