@@ -1,5 +1,5 @@
 /**
- * GoWM - Go Wasm Manager TypeScript Definitions v1.1.2
+ * GoWM - Go Wasm Manager TypeScript Definitions v1.1.6
  * 
  * Comprehensive TypeScript definitions for GoWM package.
  * Provides type safety for loading and managing Go Wasm modules.
@@ -228,6 +228,113 @@ export interface GitHubLoadOptions extends LoadOptions {
 }
 
 /**
+ * Web Worker loading options
+ */
+export interface WorkerLoadOptions extends LoadOptions {
+    /** Worker initialization timeout in milliseconds (default: 30000) */
+    workerTimeout?: number;
+    /** Maximum number of concurrent workers (default: 4) */
+    maxWorkers?: number;
+    /** Enable debug logging for workers (default: false) */
+    debug?: boolean;
+    /** Enable/disable workers (default: true in browser) */
+    enableWorkers?: boolean;
+    /** Transferable objects to transfer to worker */
+    transferables?: Transferable[];
+}
+
+/**
+ * Web Worker module proxy interface
+ * Returned by loadInWorker for executing WASM in a separate thread
+ */
+export interface WorkerModule {
+    /** Unique worker ID */
+    workerId: string;
+    /** Module identifier */
+    moduleId: string;
+    /** Whether the worker is ready */
+    ready: boolean;
+    /** Whether this module runs in a worker */
+    inWorker: true;
+    
+    /**
+     * Call a function in the worker
+     * @param functionName - Name of the function to call
+     * @param args - Function arguments
+     * @returns Promise that resolves to the function result
+     */
+    call(functionName: string, ...args: any[]): Promise<any>;
+    
+    /**
+     * Terminate the worker
+     */
+    terminate(): void;
+    
+    /**
+     * Get worker status
+     * @returns Worker status object or null
+     */
+    getStatus?(): WorkerStatus | null;
+}
+
+/**
+ * Worker status information
+ */
+export interface WorkerStatus {
+    /** Worker ID */
+    id: string;
+    /** Whether the worker is ready */
+    ready: boolean;
+    /** Module source */
+    source: string;
+}
+
+/**
+ * SharedArrayBuffer buffer information
+ */
+export interface SharedBufferInfo {
+    /** The SharedArrayBuffer instance */
+    buffer: SharedArrayBuffer;
+    /** Uint8Array view of the buffer */
+    view: Uint8Array;
+    /** Size of the buffer in bytes */
+    size: number;
+    /** Whether SharedArrayBuffer is supported */
+    isShared: true;
+    
+    /**
+     * Write data to the shared buffer
+     * @param data - Data to write
+     * @param offset - Offset in bytes (default: 0)
+     * @returns New offset after writing
+     */
+    write(data: ArrayBuffer | Uint8Array | number[], offset?: number): number;
+    
+    /**
+     * Read data from the shared buffer
+     * @param length - Number of bytes to read
+     * @param offset - Offset in bytes (default: 0)
+     * @returns Read data as Uint8Array
+     */
+    read(length: number, offset?: number): Uint8Array;
+    
+    /**
+     * Clear the buffer (fill with zeros)
+     */
+    clear(): void;
+    
+    /**
+     * Sync buffer data (for mapped shared buffers)
+     */
+    sync?(): void;
+    
+    /**
+     * Free the buffer resources
+     */
+    free(): void;
+}
+
+/**
  * Buffer information for data transfer between JavaScript and WASM
  */
 export interface BufferInfo {
@@ -251,12 +358,20 @@ export interface ModuleStats {
     functions: string[];
     /** List of registered JavaScript callbacks */
     callbacks: string[];
-    /** Current memory usage in bytes */
-    memoryUsage: number;
+    /** Current memory usage information */
+    memoryUsage: {
+        total: number;
+        wasm: number;
+        go: number;
+        buffers: number;
+        buffersCount: number;
+    };
     /** Number of allocated buffers */
     allocatedBuffers: number;
     /** Module identifier name */
     name: string;
+    /** Environment (Node.js or Browser) */
+    environment: 'Node.js' | 'Browser';
     /** Whether module.json metadata is available */
     hasMetadata: boolean;
     /** Metadata summary (if available) */
@@ -268,6 +383,38 @@ export interface ModuleStats {
         categories: string[];
         errorPattern: string | null;
     } | null;
+    /** Timestamp when the module was loaded */
+    loadedAt: string | null;
+    /** Supported data types for buffer creation */
+    supportedDataTypes: string[];
+}
+
+/**
+ * Statistics returned by GoWM.getStats()
+ */
+export interface GoWMStats {
+    /** GoWM version string */
+    version: string;
+    /** Total number of loaded modules */
+    totalModules: number;
+    /** Current environment */
+    environment: 'Node.js' | 'Browser';
+    /** Total memory usage across all modules in bytes */
+    totalMemoryUsage: number;
+    /** Loader statistics */
+    loaderStats: {
+        totalModules: number;
+        cachedModules: number;
+        totalLoadTime: number;
+    };
+    /** Array of module information */
+    modules: Array<{
+        name: string;
+        source: string;
+        ready: boolean;
+        loadedAt: string;
+        stats: ModuleStats;
+    }>;
 }
 
 /**
@@ -364,6 +511,78 @@ export declare class WasmBridge {
 }
 
 /**
+ * WASM Worker Manager for non-blocking WASM execution
+ */
+export declare class WasmWorkerManager {
+    constructor(options?: { maxWorkers?: number; debug?: boolean });
+    
+    /** Map of active workers */
+    workers: Map<string, WorkerInfo>;
+    /** Maximum number of concurrent workers */
+    maxWorkers: number;
+    /** Debug mode */
+    debug: boolean;
+    /** Whether running in Node.js */
+    readonly _isNode: boolean;
+    
+    /**
+     * Create a new worker for a WASM module
+     * @param moduleId - Unique identifier for the module
+     * @param source - Module source (GitHub repo, URL, or path)
+     * @param loaderOptions - Options to pass to UnifiedWasmLoader
+     * @returns Promise that resolves to the worker ID
+     */
+    createWorker(moduleId: string, source: string, loaderOptions?: WorkerLoadOptions): Promise<string>;
+    
+    /**
+     * Call a function in a worker
+     * @param moduleId - Worker/module ID
+     * @param functionName - Function to call
+     * @param args - Function arguments
+     * @param options - Call options including timeout
+     * @returns Promise that resolves to the function result
+     */
+    callWorkerFunction(moduleId: string, functionName: string, args: any[], options?: { timeout?: number; transferables?: Transferable[] }): Promise<any>;
+    
+    /**
+     * Terminate a worker
+     * @param moduleId - Worker ID
+     */
+    terminateWorker(moduleId: string): void;
+    
+    /**
+     * Terminate all workers
+     */
+    terminateAll(): void;
+    
+    /**
+     * Get worker status
+     * @param moduleId - Worker ID
+     * @returns Worker status or null
+     */
+    getWorkerStatus(moduleId: string): WorkerStatus | null;
+    
+    /**
+     * Extract transferable objects from arguments
+     * @param args - Function arguments
+     * @param additionalTransferables - Additional transferable objects
+     * @returns Array of transferable objects
+     */
+    _extractTransferables(args: any[], additionalTransferables?: Transferable[]): Transferable[];
+}
+
+/**
+ * Internal worker information
+ */
+interface WorkerInfo {
+    id: string;
+    worker: Worker;
+    ready: boolean;
+    source: string;
+    loaderOptions?: WorkerLoadOptions;
+}
+
+/**
  * WASM module loader for managing module loading and caching
  */
 export declare class WasmLoader {
@@ -376,6 +595,14 @@ export declare class WasmLoader {
      * @returns Promise that resolves to the loaded module
      */
     loadModule(wasmPath: string, options?: LoadOptions): Promise<WasmModule>;
+    
+    /**
+     * Load a WASM module in a Web Worker
+     * @param source - File path, URL, or GitHub repo
+     * @param options - Worker loading options
+     * @returns Promise that resolves to a WorkerModule
+     */
+    loadInWorker(source: string, options?: WorkerLoadOptions): Promise<WorkerModule>;
 
     /**
      * Load the Go Wasm runtime
@@ -450,6 +677,14 @@ export declare class GoWM {
     loadFromFile(filePath: string, options?: LoadOptions): Promise<WasmBridge>;
 
     /**
+     * Load a WASM module in a Web Worker for non-blocking execution
+     * @param source - File path, URL, or GitHub repo
+     * @param options - Worker loading options
+     * @returns Promise that resolves to a WorkerModule proxy
+     */
+    loadInWorker(source: string, options?: WorkerLoadOptions): Promise<WorkerModule>;
+
+    /**
      * Get a previously loaded module
      * @param name - Module name
      * @returns WasmBridge instance or null if not found
@@ -471,9 +706,9 @@ export declare class GoWM {
 
     /**
      * Get statistics for all modules
-     * @returns Object with module names as keys and stats as values
+     * @returns GoWM statistics object with version, modules, memory usage, etc.
      */
-    getStats(): Record<string, ModuleStats>;
+    getStats(): GoWMStats;
 
     /**
      * Unload all modules and clean up resources
@@ -526,7 +761,7 @@ export declare class GoWM {
      */
     describeFunction(name: string, funcName: string): FunctionDescription | null;
 
-    // ──── Event System (v1.1.2) ────
+    // ──── Event System (v1.1.6) ────
 
     /**
      * Register an event listener
@@ -561,10 +796,11 @@ export declare function load(source: string, options?: LoadOptions): Promise<Was
 export declare function loadFromGitHub(githubRepo: string, options?: GitHubLoadOptions): Promise<WasmBridge>;
 export declare function loadFromUrl(url: string, options?: LoadOptions): Promise<WasmBridge>;
 export declare function loadFromFile(filePath: string, options?: LoadOptions): Promise<WasmBridge>;
+export declare function loadInWorker(source: string, options?: WorkerLoadOptions): Promise<WorkerModule>;
 export declare function get(name?: string): WasmBridge | null;
 export declare function unload(name?: string): boolean;
 export declare function listModules(): string[];
-export declare function getStats(): Record<string, ModuleStats>;
+export declare function getStats(): GoWMStats;
 export declare function unloadAll(): void;
 export declare function isLoaded(name?: string): boolean;
 export declare function getTotalMemoryUsage(): number;
@@ -577,8 +813,179 @@ export declare function describeFunction(name: string, funcName: string): Functi
 // Legacy exports for backward compatibility
 export { WasmBridge as UnifiedWasmBridge };
 export { WasmLoader as UnifiedWasmLoader };
+export { WasmWorkerManager as WasmWorker };
 
-// ──── Type Generator (v1.1.2) ────
+// ──── React Hooks ────
+
+/**
+ * React hook result for useWasm
+ */
+export interface UseWasmResult {
+    bridge: WasmBridge | null;
+    loading: boolean;
+    error: Error | null;
+    reload: () => void;
+}
+
+/**
+ * React hook result for useWasmFromGitHub
+ */
+export interface UseWasmFromGitHubResult extends UseWasmResult {
+    metadata: ModuleMetadata | null;
+}
+
+/**
+ * React hook result for useWasmWorker
+ */
+export interface UseWasmWorkerResult {
+    worker: WorkerModule | null;
+    loading: boolean;
+    error: Error | null;
+    call: (functionName: string, ...args: any[]) => Promise<any>;
+    terminate: () => void;
+    ready: boolean;
+    inWorker: true;
+}
+
+/**
+ * React hook result for useSharedBuffer
+ */
+export interface UseSharedBufferResult {
+    buffer: SharedArrayBuffer | null;
+    view: Uint8Array | null;
+    size: number;
+    supported: boolean;
+    error: Error | null;
+    writeData: (data: ArrayBuffer | Uint8Array | number[], offset?: number) => number;
+    readData: (length: number, offset?: number) => Uint8Array;
+    clear: () => void;
+    ready: boolean;
+}
+
+/**
+ * React hook result for useWasmWorkerWithSharedMemory
+ */
+export interface UseWasmWorkerWithSharedMemoryResult extends UseWasmWorkerResult {
+    sharedBuffer: Omit<UseSharedBufferResult, 'buffer' | 'view'> & { buffer: SharedArrayBuffer | null; view: Uint8Array | null };
+    callWithSharedMemory: (functionName: string, data: ArrayBuffer | Uint8Array | number[], ...args: any[]) => Promise<any>;
+}
+
+/**
+ * React: Hook to load a WASM module from any source
+ */
+export declare function useWasm(source: string, options?: LoadOptions): UseWasmResult;
+
+/**
+ * React: Hook to load a WASM module from GitHub
+ */
+export declare function useWasmFromGitHub(repo: string, options?: GitHubLoadOptions): UseWasmFromGitHubResult;
+
+/**
+ * React: Hook to load a WASM module in a Web Worker
+ */
+export declare function useWasmWorker(source: string, options?: WorkerLoadOptions): UseWasmWorkerResult;
+
+/**
+ * React: Hook for SharedArrayBuffer-based zero-copy operations
+ */
+export declare function useSharedBuffer(bufferSize?: number): UseSharedBufferResult;
+
+/**
+ * React: Combined hook for worker + shared memory (maximum performance)
+ */
+export declare function useWasmWorkerWithSharedMemory(source: string, options?: WorkerLoadOptions & { sharedBufferSize?: number }): UseWasmWorkerWithSharedMemoryResult;
+
+// ──── Vue Composables ────
+
+/**
+ * Vue composable result for useWasm
+ */
+export interface UseWasmVueResult {
+    bridge: import('vue').Ref<WasmBridge | null>;
+    loading: import('vue').Ref<boolean>;
+    error: import('vue').Ref<Error | null>;
+    reload: () => void;
+}
+
+/**
+ * Vue composable result for useWasmFromGitHub
+ */
+export interface UseWasmFromGitHubVueResult extends UseWasmVueResult {
+    metadata: import('vue').Ref<ModuleMetadata | null>;
+}
+
+/**
+ * Vue composable result for useWasmWorker
+ */
+export interface UseWasmWorkerVueResult {
+    worker: import('vue').Ref<WorkerModule | null>;
+    loading: import('vue').Ref<boolean>;
+    error: import('vue').Ref<Error | null>;
+    ready: import('vue').Ref<boolean>;
+    call: (functionName: string, ...args: any[]) => Promise<any>;
+    terminate: () => void;
+}
+
+/**
+ * Vue composable result for useSharedBuffer
+ */
+export interface UseSharedBufferVueResult {
+    buffer: import('vue').Ref<SharedArrayBuffer | null>;
+    view: import('vue').Ref<Uint8Array | null>;
+    size: number;
+    supported: import('vue').Ref<boolean>;
+    error: import('vue').Ref<Error | null>;
+    ready: import('vue').Ref<boolean>;
+    writeData: (data: ArrayBuffer | Uint8Array | number[], offset?: number) => number;
+    readData: (length: number, offset?: number) => Uint8Array;
+    clear: () => void;
+}
+
+/**
+ * Vue composable result for useWasmWorkerWithSharedMemory
+ */
+export interface UseWasmWorkerWithSharedMemoryVueResult {
+    worker: import('vue').Ref<WorkerModule | null>;
+    loading: import('vue').Ref<boolean>;
+    error: import('vue').Ref<Error | null>;
+    ready: import('vue').Ref<boolean>;
+    buffer: import('vue').Ref<SharedArrayBuffer | null>;
+    view: import('vue').Ref<Uint8Array | null>;
+    supported: import('vue').Ref<boolean>;
+    call: (functionName: string, ...args: any[]) => Promise<any>;
+    callWithSharedMemory: (functionName: string, data: ArrayBuffer | Uint8Array | number[], ...args: any[]) => Promise<any>;
+    terminate: () => void;
+    writeData: (data: ArrayBuffer | Uint8Array | number[], offset?: number) => number;
+    readData: (length: number, offset?: number) => Uint8Array;
+    clear: () => void;
+}
+
+/**
+ * Vue: Composable to load a WASM module from any source
+ */
+export declare function useWasm(source: string | import('vue').Ref<string>, options?: LoadOptions): UseWasmVueResult;
+
+/**
+ * Vue: Composable to load a WASM module from GitHub
+ */
+export declare function useWasmFromGitHub(repo: string | import('vue').Ref<string>, options?: GitHubLoadOptions): UseWasmFromGitHubVueResult;
+
+/**
+ * Vue: Composable to load a WASM module in a Web Worker
+ */
+export declare function useWasmWorker(source: string | import('vue').Ref<string>, options?: WorkerLoadOptions): UseWasmWorkerVueResult;
+
+/**
+ * Vue: Composable for SharedArrayBuffer-based zero-copy operations
+ */
+export declare function useSharedBuffer(bufferSize?: number): UseSharedBufferVueResult;
+
+/**
+ * Vue: Combined composable for worker + shared memory (maximum performance)
+ */
+export declare function useWasmWorkerWithSharedMemory(source: string | import('vue').Ref<string>, options?: WorkerLoadOptions & { sharedBufferSize?: number }): UseWasmWorkerWithSharedMemoryVueResult;
+
+// ──── Type Generator (v1.1.6) ────
 
 export interface TypeGeneratorOptions {
     /** Custom interface name (default: derived from module name) */

@@ -3,7 +3,7 @@
  * Supports loading from local files, HTTP URLs, and GitHub repositories
  * Works in both Node.js and browser environments
  * 
- * @version 1.3.0
+ * @version 1.1.6
  * Features:
  * - Auto-download and parse module.json metadata from GitHub repos
  * - SHA256 integrity verification via .wasm.integrity files
@@ -21,10 +21,21 @@
  * -  Web Worker support for non-blocking execution
  * -  SharedArrayBuffer support for zero-copy memory transfers
  */
+
+// Import WasmWorkerManager for browser environments
+let WasmWorkerManager;
+if (typeof require !== 'undefined') {
+    try {
+        WasmWorkerManager = require('../core/wasm-worker');
+    } catch (e) {
+        // WasmWorkerManager not available (will be checked at runtime)
+    }
+}
+
 class UnifiedWasmLoader {
     constructor(options = {}) {
         this.modules = new Map();
-        this.isNode = typeof window === 'undefined';
+        this.isNode = typeof process !== 'undefined' && !!process.versions?.node;
         this.nodeModulesLoaded = false;
         
         //  Global proxy virtualization (opt-in for backward compatibility)
@@ -134,7 +145,7 @@ class UnifiedWasmLoader {
             // Use instantiateStreaming for HTTP sources when not cached
             const useStreaming = this.isHttpUrl(source) && 
                                 typeof WebAssembly.instantiateStreaming === 'function' &&
-                                !(options.cache !== false && this._hasCachedBytes(source));
+                                !(options.cache !== false && this._hasCachedBytes(source, options));
 
             if (useStreaming) {
                 result = await this._instantiateStreaming(source, go.importObject, options);
@@ -202,11 +213,15 @@ class UnifiedWasmLoader {
 
         // Lazy load worker manager
         if (!this._workerManager) {
-            // Import WasmWorkerManager
-            if (typeof WasmWorkerManager === 'undefined') {
-                throw new Error('WasmWorkerManager not available. Include wasm-worker.js');
+            // Get WasmWorkerManager from imports or global scope
+            const WorkerManager = WasmWorkerManager || 
+                (typeof window !== 'undefined' && window.WasmWorkerManager) ||
+                (typeof globalThis !== 'undefined' && globalThis.WasmWorkerManager);
+            
+            if (typeof WorkerManager === 'undefined') {
+                throw new Error('WasmWorkerManager not available. Include wasm-worker.js or import WasmWorkerManager from gowm');
             }
-            this._workerManager = new WasmWorkerManager({
+            this._workerManager = new WorkerManager({
                 debug: options.debug || false,
                 maxWorkers: options.maxWorkers || 4
             });
@@ -251,6 +266,27 @@ class UnifiedWasmLoader {
     }
 
     /**
+     * Initialize the secure namespace registry if not already present.
+     * Uses Object.defineProperty to prevent accidental overwriting.
+     * @private
+     */
+    _initNamespaceRegistry() {
+        if (!globalThis.__gowm_modules_) {
+            try {
+                Object.defineProperty(globalThis, '__gowm_modules_', {
+                    value: {},
+                    writable: false,
+                    configurable: true, // Allow cleanup on module unload
+                    enumerable: false
+                });
+            } catch (e) {
+                // Fallback if Object.defineProperty fails
+                globalThis.__gowm_modules_ = {};
+            }
+        }
+    }
+
+    /**
      * Isolate module functions into a namespace to prevent globalThis pollution.
      * Functions registered by Go are moved from globalThis to
      * globalThis.__gowm_modules_[moduleId]_[funcName]
@@ -263,10 +299,9 @@ class UnifiedWasmLoader {
         const internalPrefixes = ['__gowm_', 'go:', 'gojs'];
         const newKeys = Object.keys(globalThis).filter(k => !keysBefore.has(k));
 
-        // Initialize namespace registry
-        if (!globalThis.__gowm_modules_) {
-            globalThis.__gowm_modules_ = {};
-        }
+        // Initialize namespace registry securely
+        this._initNamespaceRegistry();
+        
         if (!globalThis.__gowm_modules_[moduleId]) {
             globalThis.__gowm_modules_[moduleId] = {};
         }
@@ -292,10 +327,9 @@ class UnifiedWasmLoader {
      * @returns {Proxy} Proxied global object
      */
     _createGlobalProxy(moduleId) {
-        // Initialize namespace if not exists
-        if (!globalThis.__gowm_modules_) {
-            globalThis.__gowm_modules_ = {};
-        }
+        // Initialize namespace securely
+        this._initNamespaceRegistry();
+        
         if (!globalThis.__gowm_modules_[moduleId]) {
             globalThis.__gowm_modules_[moduleId] = {};
         }
@@ -347,7 +381,7 @@ class UnifiedWasmLoader {
 
         // Check cache if enabled
         if (cacheOpts.enabled) {
-            const cacheKey = this._getCacheKey(source);
+            const cacheKey = this._getCacheKey(source, options);
             const cached = await this._getFromCache(cacheKey, cacheOpts);
             if (cached) {
                 return cached;
@@ -382,7 +416,7 @@ class UnifiedWasmLoader {
 
         // Save to cache
         if (cacheOpts.enabled && bytes) {
-            const cacheKey = this._getCacheKey(source);
+            const cacheKey = this._getCacheKey(source, options);
             await this._saveToCache(cacheKey, bytes, cacheOpts);
         }
 
@@ -1231,10 +1265,11 @@ class UnifiedWasmLoader {
     /**
      * Check if cached WASM bytes exist for a source
      * @param {string} source - Source identifier
+     * @param {object} options - Loading options (path, filename)
      * @returns {boolean}
      */
-    _hasCachedBytes(source) {
-        const cacheKey = this._getCacheKey(source);
+    _hasCachedBytes(source, options = {}) {
+        const cacheKey = this._getCacheKey(source, options);
         const cached = this._wasmBytesCache.get(cacheKey);
         if (!cached) return false;
         // Check TTL
@@ -1385,17 +1420,24 @@ class UnifiedWasmLoader {
     /**
      * Generate a stable cache key from source identifier.
      * Uses SHA256 hash in Node.js, simple hash in browser.
+     * Includes path and filename to ensure unique keys for different modules from same repo.
      * @param {string} source - Source identifier
+     * @param {object} options - Loading options (path, filename)
      * @returns {string} Cache key
      */
-    _getCacheKey(source) {
+    _getCacheKey(source, options = {}) {
+        // Include path and filename in cache key to avoid collisions
+        const path = options.path || '';
+        const filename = options.filename || '';
+        const uniqueSource = `${source}|${path}|${filename}`;
+        
         if (this.isNode && this.crypto) {
-            return this.crypto.createHash('sha256').update(source).digest('hex');
+            return this.crypto.createHash('sha256').update(uniqueSource).digest('hex');
         }
         // Simple string hash for browser
         let hash = 0;
-        for (let i = 0; i < source.length; i++) {
-            const char = source.charCodeAt(i);
+        for (let i = 0; i < uniqueSource.length; i++) {
+            const char = uniqueSource.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;
             hash = hash & hash; // Convert to 32bit integer
         }

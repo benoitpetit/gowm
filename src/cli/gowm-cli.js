@@ -10,14 +10,14 @@
  *   npx gowm verify <file> --integrity <hash> Verify WASM file integrity
  *   npx gowm install <repo> <module> [--dir]  Download WASM module to local directory
  * 
- * @version 1.1.2
+ * @version 1.1.6
  */
 
 const fs = require('fs');
 const path = require('path');
 
 const HELP = `
-GoWM CLI v1.1.2 — Go WebAssembly Module Manager
+GoWM CLI — Go WebAssembly Module Manager
 
 Usage:
   gowm <command> [arguments] [options]
@@ -30,7 +30,7 @@ Commands:
   install <repo> <module> [--dir d]   Download module to local directory
 
 Options:
-  --branch <name>   Git branch (default: master)
+  --branch <name>   Git branch (default: main)
   --out <file>      Output file path
   --dir <path>      Target directory (default: ./)
   --help, -h        Show this help
@@ -53,7 +53,8 @@ async function main() {
     }
 
     if (args.includes('--version') || args.includes('-v')) {
-        console.log('gowm v1.1.2');
+        const pkg = require('../../package.json');
+        console.log(`gowm v${pkg.version}`);
         process.exit(0);
     }
 
@@ -115,7 +116,7 @@ async function cmdList(args) {
     if (!repo || !repo.includes('/')) {
         throw new Error('Usage: gowm list <owner/repo>');
     }
-    const branch = getOption(args, '--branch', 'master');
+    const branch = getOption(args, '--branch', 'main');
     const [owner, repoName] = repo.split('/');
 
     console.log(`\x1b[36m📦 Listing modules in ${repo} (${branch})\x1b[0m\n`);
@@ -133,18 +134,32 @@ async function cmdList(args) {
         return;
     }
 
-    // Fetch module.json for each directory
-    const results = await Promise.allSettled(
-        wasmDirs.map(async dir => {
-            try {
-                const url = `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/${dir}/module.json`;
-                const meta = await fetchJSON(url);
-                return { dir, meta };
-            } catch {
-                return { dir, meta: null };
-            }
-        })
-    );
+    // Fetch module.json for each directory with rate limiting
+    // (GitHub API has rate limit of 60 req/hour for unauthenticated users)
+    const results = [];
+    const batchSize = 5; // Process in batches to avoid rate limiting
+    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    
+    for (let i = 0; i < wasmDirs.length; i += batchSize) {
+        const batch = wasmDirs.slice(i, i + batchSize);
+        const batchResults = await Promise.allSettled(
+            batch.map(async dir => {
+                try {
+                    const url = `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/${dir}/module.json`;
+                    const meta = await fetchJSON(url);
+                    return { dir, meta };
+                } catch {
+                    return { dir, meta: null };
+                }
+            })
+        );
+        results.push(...batchResults);
+        
+        // Add delay between batches to avoid rate limiting
+        if (i + batchSize < wasmDirs.length) {
+            await delay(500); // 500ms delay between batches
+        }
+    }
 
     console.log(`Found \x1b[33m${wasmDirs.length}\x1b[0m module(s):\n`);
     console.log('  %-20s %-10s %-12s %s', 'Module', 'Version', 'Functions', 'Description');
@@ -169,7 +184,7 @@ async function cmdInfo(args) {
     if (!repo || !moduleName) {
         throw new Error('Usage: gowm info <owner/repo> <module>');
     }
-    const branch = getOption(args, '--branch', 'master');
+    const branch = getOption(args, '--branch', 'main');
     const [owner, repoName] = repo.split('/');
 
     const url = `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/${moduleName}/module.json`;
@@ -224,7 +239,7 @@ async function cmdTypes(args) {
         throw new Error('Usage: gowm types <owner/repo> <module> [--out file]');
     }
     const outFile = getOption(args, '--out');
-    const branch = getOption(args, '--branch', 'master');
+    const branch = getOption(args, '--branch', 'main');
 
     const { generateTypesFromGitHub } = require('../tools/type-generator');
     const code = await generateTypesFromGitHub(repo, moduleName, { branch });
@@ -281,7 +296,7 @@ async function cmdInstall(args) {
         throw new Error('Usage: gowm install <owner/repo> <module> [--dir path] [--branch name]');
     }
     const targetDir = getOption(args, '--dir', './');
-    const branch = getOption(args, '--branch', 'master');
+    const branch = getOption(args, '--branch', 'main');
     const [owner, repoName] = repo.split('/');
 
     const moduleDir = path.join(targetDir, moduleName);

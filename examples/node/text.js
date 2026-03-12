@@ -17,6 +17,10 @@ async function main() {
         // Load text-wasm module from GitHub repository
         // v1.4.0: module.json is fetched, integrity is verified, readySignal auto-discovered
         console.log('Loading text processing WASM module...');
+        
+        // Clear cache to ensure we load the correct module (workaround for cache key collision)
+        await gowm.clearCache();
+        
         const textProcessor = await gowm.loadFromGitHub('benoitpetit/wasm-modules-repository', {
             path: 'text-wasm',
             filename: 'main.wasm',
@@ -24,6 +28,18 @@ async function main() {
         });
 
         console.log('Text processing module loaded successfully\n');
+        
+        // Verify we have the correct module by checking available functions
+        const availableFunctions = textProcessor.getAvailableFunctions();
+        console.log('Available functions:', availableFunctions.slice(0, 10).join(', ') + '...\n');
+        
+        // Verify text-specific functions exist
+        const requiredFunctions = ['textSimilarity', 'camelCase', 'wordCount'];
+        const missingFunctions = requiredFunctions.filter(fn => !availableFunctions.includes(fn));
+        if (missingFunctions.length > 0) {
+            throw new Error(`Missing text processing functions: ${missingFunctions.join(', ')}. ` +
+                `The wrong module may have been loaded. Found: ${availableFunctions.slice(0, 5).join(', ')}`);
+        }
 
         // Enable silent mode for cleaner output
         textProcessor.call('setSilentMode', true);

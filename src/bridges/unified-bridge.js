@@ -3,7 +3,7 @@
  * Provides interface between JavaScript and WASM modules
  * Works in both Node.js and browser environments
  * 
- * @version 1.2.0
+ * @version 1.1.6
  * Features:
  * - describe(funcName) for inline documentation from module.json
  * - getDetailedFunctions() returns functions with metadata
@@ -63,17 +63,37 @@ class UnifiedWasmBridge {
         this.allocatedBuffers = new Set();
         this.name = options.name || 'unnamed';
         this.moduleId = wasmModule.moduleId || this.name;
-        this.isNode = typeof window === 'undefined';
+        this.isNode = typeof process !== 'undefined' && !!process.versions?.node;
 
         //  Module metadata from module.json
         this._metadata = wasmModule.metadata || null;
         this._functionsMap = this._buildFunctionsMap();
         this._errorPattern = this._metadata?.gowmConfig?.errorPattern || null;
         this._validateCalls = options.validateCalls !== false;
-        this._debugMode = options.logLevel === 'debug';
+        this._logLevel = options.logLevel || 'info';
+        this._debugMode = this._logLevel === 'debug';
+        this._logger = options.logger || console;
         
         //  Error codes export
         this.ErrorCodes = ErrorCodes;
+    }
+
+    /**
+     * Internal logging with level filtering
+     * @param {'error'|'warn'|'info'|'debug'} level
+     * @param  {...any} args
+     * @private
+     */
+    _log(level, ...args) {
+        const levels = { silent: 0, error: 1, warn: 2, info: 3, debug: 4 };
+        const currentLevel = levels[this._logLevel] !== undefined ? levels[this._logLevel] : 3;
+        const msgLevel = levels[level] !== undefined ? levels[level] : 3;
+        if (msgLevel <= currentLevel) {
+            if (level === 'error') this._logger.error(...args);
+            else if (level === 'warn') this._logger.warn(...args);
+            else if (level === 'debug' && this._logger.debug) this._logger.debug(...args);
+            else this._logger.log(...args);
+        }
     }
 
     /**
@@ -193,7 +213,7 @@ class UnifiedWasmBridge {
         }
 
         if (args.length > params.length) {
-            console.warn(
+            this._log('warn',
                 `⚠️ ${funcName}(): expected at most ${params.length} argument(s), got ${args.length}`
             );
         }
@@ -204,7 +224,7 @@ class UnifiedWasmBridge {
                 const expected = params[i].type;
                 const actual = typeof args[i];
                 if (expected && actual !== expected && expected !== 'any') {
-                    console.warn(
+                    this._log('warn',
                         `⚠️ ${funcName}(): parameter '${params[i].name}' expected type '${expected}', got '${actual}'`
                     );
                 }
@@ -323,7 +343,14 @@ class UnifiedWasmBridge {
                 size,
                 originalData: data,
                 type: data.constructor.name,
-                free: () => this.freeBuffer(ptr, size)
+                freed: false,
+                free: () => {
+                    if (!bufferInfo.freed) {
+                        this.freeBuffer(ptr, size);
+                        this.allocatedBuffers.delete(bufferInfo);
+                        bufferInfo.freed = true;
+                    }
+                }
             };
 
             this.allocatedBuffers.add(bufferInfo);
@@ -369,7 +396,7 @@ class UnifiedWasmBridge {
                 return this.call('__gowm_alloc', size);
             }
         } catch (error) {
-            console.warn('WASM memory allocation failed:', error.message);
+            this._log('warn', 'WASM memory allocation failed:', error.message);
         }
 
         return null;
@@ -432,7 +459,7 @@ class UnifiedWasmBridge {
                 return;
             }
         } catch (error) {
-            console.warn('Failed to free memory:', error.message);
+            this._log('warn', 'Failed to free memory:', error.message);
         }
     }
 
@@ -928,9 +955,12 @@ class UnifiedWasmBridge {
                     }
                 },
                 
+                freed: false,
                 free: () => {
-                    if (ptr) {
+                    if (!bufferInfo.freed && ptr) {
                         this.freeBuffer(ptr, mapLength);
+                        this.allocatedBuffers.delete(bufferInfo);
+                        bufferInfo.freed = true;
                     }
                 }
             };

@@ -17,6 +17,10 @@ async function main() {
         // Load crypto WASM module from GitHub repository
         // v1.4.0: Integrity verified via .wasm.integrity, metadata loaded from module.json
         console.log('Loading crypto WASM module...');
+        
+        // Clear cache to ensure we load the correct module (workaround for cache key collision)
+        await gowm.clearCache();
+        
         const crypto = await gowm.loadFromGitHub('benoitpetit/wasm-modules-repository', {
             path: 'crypto-wasm',
             filename: 'main.wasm',
@@ -25,6 +29,18 @@ async function main() {
         });
 
         console.log('Crypto module loaded successfully\n');
+        
+        // Verify we have the correct module by checking available functions
+        const availableFunctions = crypto.getAvailableFunctions();
+        console.log('Available functions:', availableFunctions.slice(0, 10).join(', ') + '...\n');
+        
+        // Verify crypto-specific functions exist
+        const requiredFunctions = ['hashSHA256', 'generateAESKey', 'generateUUID'];
+        const missingFunctions = requiredFunctions.filter(fn => !availableFunctions.includes(fn));
+        if (missingFunctions.length > 0) {
+            throw new Error(`Missing crypto functions: ${missingFunctions.join(', ')}. ` +
+                `The wrong module may have been loaded. Found: ${availableFunctions.slice(0, 5).join(', ')}`);
+        }
 
         // v1.4.0: Describe a function before using it
         console.log('=== Function Documentation (v1.4.0) ===');

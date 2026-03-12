@@ -2,7 +2,7 @@
  * React Hooks for GoWM
  *  Web Worker support with useWasmWorker hook
  * 
- * @version 1.3.0
+ * @version 1.1.6
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';

@@ -2,15 +2,20 @@
  * Tests for  Web Workers Support
  * Tests for loadInWorker() and WasmWorkerManager
  * 
- * @version 1.3.0
+ * @version 1.1.6
  */
 
 const WasmWorkerManager = require('../../src/core/wasm-worker');
 
 describe(' Web Workers Support', () => {
     let workerManager;
+    let originalNodeVersion;
 
     beforeEach(() => {
+        // Simulate headless browser environment by temporarily removing Node.js detection
+        originalNodeVersion = process.versions.node;
+        delete process.versions.node;
+        
         // Mock window and Worker objects for testing
         global.window = {};
         global.Worker = class MockWorker {
@@ -53,6 +58,10 @@ describe(' Web Workers Support', () => {
     afterEach(() => {
         if (workerManager) {
             workerManager.terminateAll();
+        }
+        // Restore Node.js environment
+        if (originalNodeVersion) {
+            process.versions.node = originalNodeVersion;
         }
         delete global.window;
         delete global.Worker;
@@ -289,6 +298,10 @@ describe(' Web Workers Support', () => {
         let consoleWarnSpy;
 
         beforeEach(() => {
+            // Restore Node.js environment for these specific tests
+            // (parent beforeEach deletes node, so we add it back)
+            process.versions.node = '20.0.0';
+            
             // Clear window mock for Node.js tests
             delete global.window;
             // Mock console.warn to suppress expected warnings

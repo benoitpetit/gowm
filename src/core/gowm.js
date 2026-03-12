@@ -5,7 +5,7 @@ const UnifiedWasmBridge = require('../bridges/unified-bridge');
  * GoWM - Go WebAssembly Manager
  * Main class that provides a simplified interface for loading and managing WASM modules
  * 
- * @version 1.1.2
+ * @version 1.1.6
  */
 class GoWM {
     /**
@@ -138,7 +138,9 @@ class GoWM {
             throw new Error('filePath must be a non-empty string');
         }
 
-        if (typeof window !== 'undefined') {
+        if (typeof process !== 'undefined' && process.versions?.node) {
+            // Node.js environment - proceed
+        } else {
             throw new Error('loadFromFile is only available in Node.js environment');
         }
 
@@ -148,6 +150,16 @@ class GoWM {
         } catch (error) {
             throw new Error(`Failed to load from file ${filePath}: ${error.message}`);
         }
+    }
+
+    /**
+     * Load a WASM module in a Web Worker for non-blocking execution
+     * @param {string} source - File path, URL, or GitHub repo
+     * @param {object} options - Loading options
+     * @returns {Promise<object>} Worker proxy with call() method
+     */
+    async loadInWorker(source, options = {}) {
+        return this.loader.loadInWorker(source, options);
     }
 
     /**
@@ -258,7 +270,7 @@ class GoWM {
         return {
             version: this.getVersion(),
             totalModules: this.modules.size,
-            environment: typeof window === 'undefined' ? 'Node.js' : 'Browser',
+            environment: (typeof process !== 'undefined' && process.versions?.node) ? 'Node.js' : 'Browser',
             totalMemoryUsage: totalMemory,
             loaderStats: this.loader.getStats(),
             modules
@@ -312,7 +324,7 @@ class GoWM {
         } catch (e) {
             // Fallback for browser or if package.json is not available
         }
-        return '1.1.2';
+        return '1.1.6';
     }
 
     /**
@@ -412,7 +424,14 @@ class GoWM {
     off(event, callback) {
         const listeners = this._listeners.get(event);
         if (listeners) {
-            this._listeners.set(event, listeners.filter(fn => fn !== callback));
+            // Filter out both direct callback and wrapped callbacks (from once())
+            this._listeners.set(event, listeners.filter(fn => {
+                // Direct match
+                if (fn === callback) return false;
+                // Check if it's a wrapper from once() that has the original callback
+                if (fn._original === callback) return false;
+                return true;
+            }));
         }
         return this;
     }

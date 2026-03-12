@@ -5,7 +5,7 @@
  * Usage:
  *   import { useWasm, useWasmFromGitHub, useWasmWorker } from 'gowm/react';
  * 
- * @version 1.3.0
+ * @version 1.1.6
  *  Added Web Worker support (useWasmWorker)
  *  Added SharedArrayBuffer support (useSharedBuffer, useWasmWorkerWithSharedMemory)
  */
@@ -363,6 +363,9 @@ function useSharedBuffer(bufferSize = 1024 * 1024) {
  * @returns {object} Combined worker and shared buffer state
  */
 function useWasmWorkerWithSharedMemory(source, options = {}) {
+    ensureReact();
+    const { useCallback } = React;
+    
     const workerHook = useWasmWorker(source, options);
     const sharedBufferHook = useSharedBuffer(options.sharedBufferSize || 1024 * 1024);
 

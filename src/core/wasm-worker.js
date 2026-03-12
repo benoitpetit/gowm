@@ -2,7 +2,7 @@
  * WASM Worker Manager
  *  Web Worker support for non-blocking WASM execution
  * 
- * @version 1.3.0
+ * @version 1.1.6
  * Features:
  * - Load and execute WASM modules in separate worker threads
  * - Prevent UI blocking during heavy computations
@@ -21,7 +21,7 @@ class WasmWorkerManager {
         this.callId = 0;
         this.pendingCalls = new Map();
         
-        this._isNode = typeof window === 'undefined';
+        this._isNode = typeof process !== 'undefined' && !!process.versions?.node;
         if (this._isNode) {
             console.warn('[WasmWorkerManager] Web Workers are not supported in Node.js environment');
         }

@@ -1,6 +1,7 @@
 const GoWM = require('./core/gowm');
 const UnifiedWasmLoader = require('./loaders/unified-loader');
 const UnifiedWasmBridge = require('./bridges/unified-bridge');
+const WasmWorkerManager = require('./core/wasm-worker');
 const { generateTypes, generateTypesFromGitHub } = require('./tools/type-generator');
 
 // Import error classes and codes
@@ -9,7 +10,19 @@ const { GoWMError, ErrorCodes } = UnifiedWasmBridge;
 // Create main instance
 const gowm = new GoWM();
 
+// Detect browser environment
+const isBrowser = typeof window !== 'undefined';
+
 // Export both the instance and the classes for advanced usage
+// Expose to browser global scope
+if (isBrowser && window) {
+    window.GoWM = GoWM;
+    window.UnifiedWasmLoader = UnifiedWasmLoader;
+    window.UnifiedWasmBridge = UnifiedWasmBridge;
+    window.WasmWorkerManager = WasmWorkerManager;
+    window.Gowm = gowm; // Legacy lowercase
+}
+
 module.exports = {
     // Main GoWM instance (default export)
     default: gowm,
@@ -20,6 +33,7 @@ module.exports = {
     loadFromUrl: gowm.loadFromUrl.bind(gowm),
     loadFromFile: gowm.loadFromFile.bind(gowm),
     loadFromNPM: gowm.loadFromNPM.bind(gowm), // deprecated
+    loadInWorker: gowm.loadInWorker.bind(gowm),
     get: gowm.get.bind(gowm),
     unload: gowm.unload.bind(gowm),
     unloadAll: gowm.unloadAll.bind(gowm),
@@ -37,10 +51,12 @@ module.exports = {
     GoWM,
     UnifiedWasmLoader,
     UnifiedWasmBridge,
+    WasmWorkerManager,
 
     // Legacy class exports for backward compatibility
     WasmLoader: UnifiedWasmLoader,
     WasmBridge: UnifiedWasmBridge,
+    WasmWorker: WasmWorkerManager,
 
     // Type generator
     generateTypes,

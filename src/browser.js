@@ -4,6 +4,7 @@
  * Browser-optimized version of GoWM for client-side applications.
  * Provides ES6 module exports and browser-compatible functionality.
  * 
+ * @version 1.1.6
  * @author devbyben
  * @license MIT
  */
@@ -17,18 +18,20 @@
     const isES6 = typeof window !== 'undefined' && typeof window.GoWM === 'undefined';
 
     // Import classes - adapt based on environment
-    let GoWM, UnifiedWasmLoader, UnifiedWasmBridge;
+    let GoWM, UnifiedWasmLoader, UnifiedWasmBridge, WasmWorkerManager;
 
     if (isModule) {
         // CommonJS environment (Node.js with browser bundle)
         GoWM = require('./core/gowm');
         UnifiedWasmLoader = require('./loaders/unified-loader');
         UnifiedWasmBridge = require('./bridges/unified-bridge');
+        WasmWorkerManager = require('./core/wasm-worker');
     } else {
         // Browser global environment - classes should be available
         GoWM = global.GoWM;
         UnifiedWasmLoader = global.UnifiedWasmLoader;
         UnifiedWasmBridge = global.UnifiedWasmBridge;
+        WasmWorkerManager = global.WasmWorkerManager;
     }
 
     // Create main instance for browser
@@ -52,15 +55,18 @@
         GoWM,
         UnifiedWasmLoader,
         UnifiedWasmBridge,
+        WasmWorkerManager,
 
         // Legacy class exports for backward compatibility
         WasmLoader: UnifiedWasmLoader,
         WasmBridge: UnifiedWasmBridge,
+        WasmWorker: WasmWorkerManager,
 
         // Convenience methods bound to instance
         load: gowm.load.bind(gowm),
         loadFromGitHub: gowm.loadFromGitHub.bind(gowm),
         loadFromUrl: gowm.loadFromUrl.bind(gowm),
+        loadInWorker: gowm.loadInWorker.bind(gowm),
         get: gowm.get.bind(gowm),
         unload: gowm.unload.bind(gowm),
         unloadAll: gowm.unloadAll.bind(gowm),
@@ -74,11 +80,11 @@
         getModuleMetadata: gowm.getModuleMetadata.bind(gowm),
         describeFunction: gowm.describeFunction.bind(gowm),
 
-        // Version info
-        version: '1.1.2-browser',
+        // Version info (read from package.json if available)
+        version: (typeof require !== 'undefined' && require('../package.json').version) || '1.1.6',
 
         // Create new instance
-        create: () => new GoWM()
+        create: (options) => new GoWM(options)
     };
 
     // Export based on environment
@@ -90,6 +96,8 @@
         global.GoWM = gowm;
         global.WasmLoader = UnifiedWasmLoader;
         global.WasmBridge = UnifiedWasmBridge;
+        global.WasmWorkerManager = WasmWorkerManager;
+        global.WasmWorker = WasmWorkerManager;
         global.GoWMBrowser = GoWMBrowser;
 
         // Also support ES6 imports if available

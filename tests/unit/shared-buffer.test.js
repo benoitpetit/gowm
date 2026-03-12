@@ -2,7 +2,7 @@
  * Tests for  SharedArrayBuffer Support (Zero-Copy)
  * Tests for createSharedBuffer(), mapSharedBuffer(), and related functionality
  * 
- * @version 1.3.0
+ * @version 1.1.6
  */
 
 const UnifiedWasmBridge = require('../../src/bridges/unified-bridge');
