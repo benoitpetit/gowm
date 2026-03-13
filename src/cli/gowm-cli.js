@@ -171,7 +171,7 @@ async function cmdList(args) {
     }
 
     console.log(`Found \x1b[33m${wasmDirs.length}\x1b[0m module(s):\n`);
-    console.log('  %-20s %-10s %-12s %s', 'Module', 'Version', 'Functions', 'Description');
+    console.log(`  ${'Module'.padEnd(20)} ${'Version'.padEnd(10)} ${'Functions'.padEnd(12)} Description`);
     console.log('  ' + '─'.repeat(75));
 
     for (const result of results) {
@@ -180,7 +180,7 @@ async function cmdList(args) {
         const version = meta?.version || '?';
         const funcs = meta?.functions?.length || '?';
         const desc = meta?.description ? meta.description.substring(0, 35) : '—';
-        console.log(`  %-20s %-10s %-12s %s`, dir, version, `${funcs} funcs`, desc);
+        console.log(`  ${dir.padEnd(20)} ${version.padEnd(10)} ${(`${funcs} funcs`).padEnd(12)} ${desc}`);
     }
     console.log('');
 }
