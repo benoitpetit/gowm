@@ -135,16 +135,32 @@ function generateTypes(metadata, options = {}) {
  * @returns {Promise<string>} TypeScript source code
  */
 async function generateTypesFromGitHub(repoIdentifier, modulePath, options = {}) {
-    const branch = options.branch || 'master';
     const parts = repoIdentifier.split('/');
     if (parts.length !== 2) {
         throw new Error(`Invalid repo format: "${repoIdentifier}". Expected "owner/repo".`);
     }
     const [owner, repo] = parts;
+
+    const fetchFn = globalThis.fetch || (await import('node-fetch')).default;
+
+    let branch = options.branch;
+    if (!branch) {
+        try {
+            const repoRes = await fetchFn(`https://api.github.com/repos/${owner}/${repo}`);
+            if (repoRes.ok) {
+                const repoData = await repoRes.json();
+                branch = repoData.default_branch || 'main';
+            } else {
+                branch = 'main';
+            }
+        } catch {
+            branch = 'main';
+        }
+    }
+
     const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${modulePath}/module.json`;
 
-    const fetch = globalThis.fetch || (await import('node-fetch')).default;
-    const response = await fetch(url);
+    const response = await fetchFn(url);
     if (!response.ok) {
         throw new Error(`Failed to fetch module.json from ${url}: ${response.status}`);
     }

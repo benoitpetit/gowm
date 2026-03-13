@@ -109,6 +109,15 @@ async function fetchText(url) {
     return response.text();
 }
 
+async function getDefaultBranch(owner, repo) {
+    try {
+        const data = await fetchJSON(`https://api.github.com/repos/${owner}/${repo}`);
+        return data.default_branch || 'main';
+    } catch {
+        return 'main';
+    }
+}
+
 // ── list ────────────────────────────────────────────────────────────────────
 
 async function cmdList(args) {
@@ -116,8 +125,8 @@ async function cmdList(args) {
     if (!repo || !repo.includes('/')) {
         throw new Error('Usage: gowm list <owner/repo>');
     }
-    const branch = getOption(args, '--branch', 'main');
     const [owner, repoName] = repo.split('/');
+    const branch = getOption(args, '--branch', null) || await getDefaultBranch(owner, repoName);
 
     console.log(`\x1b[36m📦 Listing modules in ${repo} (${branch})\x1b[0m\n`);
 
@@ -184,8 +193,8 @@ async function cmdInfo(args) {
     if (!repo || !moduleName) {
         throw new Error('Usage: gowm info <owner/repo> <module>');
     }
-    const branch = getOption(args, '--branch', 'main');
     const [owner, repoName] = repo.split('/');
+    const branch = getOption(args, '--branch', null) || await getDefaultBranch(owner, repoName);
 
     const url = `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/${moduleName}/module.json`;
     const meta = await fetchJSON(url);
@@ -239,7 +248,8 @@ async function cmdTypes(args) {
         throw new Error('Usage: gowm types <owner/repo> <module> [--out file]');
     }
     const outFile = getOption(args, '--out');
-    const branch = getOption(args, '--branch', 'main');
+    const [owner, repoName] = repo.split('/');
+    const branch = getOption(args, '--branch', null) || await getDefaultBranch(owner, repoName);
 
     const { generateTypesFromGitHub } = require('../tools/type-generator');
     const code = await generateTypesFromGitHub(repo, moduleName, { branch });
@@ -296,8 +306,8 @@ async function cmdInstall(args) {
         throw new Error('Usage: gowm install <owner/repo> <module> [--dir path] [--branch name]');
     }
     const targetDir = getOption(args, '--dir', './');
-    const branch = getOption(args, '--branch', 'main');
     const [owner, repoName] = repo.split('/');
+    const branch = getOption(args, '--branch', null) || await getDefaultBranch(owner, repoName);
 
     const moduleDir = path.join(targetDir, moduleName);
     if (!fs.existsSync(moduleDir)) {
