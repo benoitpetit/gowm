@@ -37,13 +37,13 @@ class UnifiedWasmLoader {
         this.modules = new Map();
         this.isNode = typeof process !== 'undefined' && !!process.versions?.node;
         this.nodeModulesLoaded = false;
-        
+
         //  Global proxy virtualization (opt-in for backward compatibility)
         this._useGlobalProxy = options.useGlobalProxy || false;
-        
+
         // Cache for GitHub default branches
         this._defaultBranchCache = new Map();
-        
+
         //  Worker management
         this._workerManager = null;
         this._workersEnabled = options.enableWorkers !== false && !this.isNode;
@@ -116,7 +116,7 @@ class UnifiedWasmLoader {
      */
     async loadModule(source, options = {}) {
         await this.ensureNodeModules();
-        
+
         const moduleId = options.name || this.extractModuleId(source);
 
         if (this.modules.has(moduleId)) {
@@ -127,25 +127,25 @@ class UnifiedWasmLoader {
             //  Load wasm_exec.js with version support if necessary
             if (!globalThis.Go) {
                 await this.loadGoRuntime(
-                    options.goRuntimePath, 
-                    options.goVersion, 
+                    options.goRuntimePath,
+                    options.goVersion,
                     moduleId
                 );
             }
 
             const go = new globalThis.Go();
-            
+
             //  Apply global proxy if enabled (opt-in for backward compatibility)
             if (this._useGlobalProxy || options.useGlobalProxy) {
                 go.global = this._createGlobalProxy(moduleId);
             }
-            
+
             let result;
 
             // Use instantiateStreaming for HTTP sources when not cached
-            const useStreaming = this.isHttpUrl(source) && 
-                                typeof WebAssembly.instantiateStreaming === 'function' &&
-                                !(options.cache !== false && this._hasCachedBytes(source, options));
+            const useStreaming = this.isHttpUrl(source) &&
+                typeof WebAssembly.instantiateStreaming === 'function' &&
+                !(options.cache !== false && this._hasCachedBytes(source, options));
 
             if (useStreaming) {
                 result = await this._instantiateStreaming(source, go.importObject, options);
@@ -214,10 +214,10 @@ class UnifiedWasmLoader {
         // Lazy load worker manager
         if (!this._workerManager) {
             // Get WasmWorkerManager from imports or global scope
-            const WorkerManager = WasmWorkerManager || 
+            const WorkerManager = WasmWorkerManager ||
                 (typeof window !== 'undefined' && window.WasmWorkerManager) ||
                 (typeof globalThis !== 'undefined' && globalThis.WasmWorkerManager);
-            
+
             if (typeof WorkerManager === 'undefined') {
                 throw new Error('WasmWorkerManager not available. Include wasm-worker.js or import WasmWorkerManager from gowm');
             }
@@ -238,7 +238,7 @@ class UnifiedWasmLoader {
             moduleId: moduleId,
             ready: true,
             inWorker: true,
-            
+
             /**
              * Call a function in the worker
              * @param {string} functionName - Function to call
@@ -301,7 +301,7 @@ class UnifiedWasmLoader {
 
         // Initialize namespace registry securely
         this._initNamespaceRegistry();
-        
+
         if (!globalThis.__gowm_modules_[moduleId]) {
             globalThis.__gowm_modules_[moduleId] = {};
         }
@@ -329,7 +329,7 @@ class UnifiedWasmLoader {
     _createGlobalProxy(moduleId) {
         // Initialize namespace securely
         this._initNamespaceRegistry();
-        
+
         if (!globalThis.__gowm_modules_[moduleId]) {
             globalThis.__gowm_modules_[moduleId] = {};
         }
@@ -462,12 +462,12 @@ class UnifiedWasmLoader {
         if (!response.ok) {
             throw new Error(`Failed to fetch WASM file: ${response.status} ${response.statusText}`);
         }
-        
+
         const bytes = await response.arrayBuffer();
-        
+
         // Auto-detect and decompress based on Content-Encoding or URL extension
-        const contentEncoding = response.headers && response.headers.get 
-            ? response.headers.get('content-encoding') 
+        const contentEncoding = response.headers && response.headers.get
+            ? response.headers.get('content-encoding')
             : null;
 
         if (contentEncoding === 'br' || url.endsWith('.br')) {
@@ -490,16 +490,16 @@ class UnifiedWasmLoader {
     async loadFromGitHub(repoIdentifier, options = {}) {
         const repoInfo = this.parseGitHubRepo(repoIdentifier);
         const wasmUrl = await this.buildGitHubWasmUrl(repoInfo, options);
-        
+
         console.log(`🔄 Loading WASM from GitHub: ${wasmUrl}`);
 
         // Fetch module.json metadata in parallel with the WASM bytes
         const moduleId = options.name || repoInfo.repo;
-        const branch = options.tag || options.branch || await this.detectDefaultBranch(repoInfo.owner, repoInfo.repo);
+        const branch = options.tag || options.branch || await this.detectDefaultBranch(repoInfo.owner, repoInfo.repo, options);
         const basePath = options.path ? `${options.path}/` : '';
 
         // Fetch metadata and integrity in parallel (non-blocking)
-        const metadataPromise = options.metadata !== false 
+        const metadataPromise = options.metadata !== false
             ? this.fetchModuleMetadata(repoInfo, branch, basePath, moduleId, options)
             : Promise.resolve(null);
 
@@ -537,7 +537,7 @@ class UnifiedWasmLoader {
     async fetchModuleMetadata(repoInfo, branch, basePath, moduleId, options = {}) {
         try {
             const metadataUrl = `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/${branch}/${basePath}module.json`;
-            const response = await this.fetchWithRetry(metadataUrl, { retries: 1, retryDelay: 500 });
+            const response = await this.fetchWithRetry(metadataUrl, { retries: 1, retryDelay: 500, headers: options.headers || {} });
             if (!response.ok) return null;
 
             const metadata = await response.json();
@@ -560,7 +560,7 @@ class UnifiedWasmLoader {
         try {
             const filename = options.filename || 'main.wasm';
             const integrityUrl = `https://raw.githubusercontent.com/${repoInfo.owner}/${repoInfo.repo}/${branch}/${basePath}${filename}.integrity`;
-            const response = await this.fetchWithRetry(integrityUrl, { retries: 1, retryDelay: 500 });
+            const response = await this.fetchWithRetry(integrityUrl, { retries: 1, retryDelay: 500, headers: options.headers || {} });
             if (!response.ok) return null;
 
             const hash = (await response.text()).trim();
@@ -654,13 +654,13 @@ class UnifiedWasmLoader {
         if (repo.startsWith('http://') || repo.startsWith('https://')) {
             throw new Error('Invalid GitHub URL format: not a GitHub URL');
         }
-        
+
         // Handle "owner/repo" format
         const parts = repo.split('/');
         if (parts.length !== 2) {
             throw new Error('GitHub repository must be in format "owner/repo"');
         }
-        
+
         return {
             owner: parts[0],
             repo: parts[1],
@@ -676,7 +676,7 @@ class UnifiedWasmLoader {
      * @param {string} repo - Repository name
      * @returns {Promise<string>} Default branch name
      */
-    async detectDefaultBranch(owner, repo) {
+    async detectDefaultBranch(owner, repo, options = {}) {
         const cacheKey = `${owner}/${repo}`;
         if (this._defaultBranchCache.has(cacheKey)) {
             return this._defaultBranchCache.get(cacheKey);
@@ -686,7 +686,7 @@ class UnifiedWasmLoader {
             await this.ensureFetch();
             const response = await this.fetchWithRetry(
                 `https://api.github.com/repos/${owner}/${repo}`,
-                { headers: { 'Accept': 'application/vnd.github.v3+json' }, retries: 2, retryDelay: 500 }
+                { headers: { 'Accept': 'application/vnd.github.v3+json', ...options.headers }, retries: 2, retryDelay: 500 }
             );
             if (response.ok) {
                 const data = await response.json();
@@ -728,9 +728,9 @@ class UnifiedWasmLoader {
     async buildGitHubWasmUrl(repoInfo, options) {
         const { owner, repo } = repoInfo;
         // Use explicit branch/tag, or auto-detect the default branch
-        const branch = options.tag || options.branch || await this.detectDefaultBranch(owner, repo);
+        const branch = options.tag || options.branch || await this.detectDefaultBranch(owner, repo, options);
         const basePath = options.path ? `${options.path}/` : '';
-        
+
         // If specific filename is provided
         if (options.filename) {
             return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${basePath}${options.filename}`;
@@ -753,7 +753,7 @@ class UnifiedWasmLoader {
         // Try each possible filename
         for (const filename of possibleFilenames) {
             const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${basePath}${filename}`;
-            
+
             try {
                 const exists = await this.checkUrlExists(url);
                 if (exists) {
@@ -844,7 +844,7 @@ class UnifiedWasmLoader {
             // Uses shorter initial delay and adaptive interval
             const checkReady = () => {
                 if (resolved) return;
-                
+
                 const signals = {
                     gowmReady: globalThis.__gowm_ready === true,
                     goInitialized: globalThis.Go && globalThis.Go._initialized,
@@ -857,9 +857,9 @@ class UnifiedWasmLoader {
                     signals.metadataReady = true;
                 }
 
-                const isReady = signals.gowmReady || signals.goInitialized || 
-                               signals.functionsAvailable || signals.moduleReady ||
-                               signals.metadataReady;
+                const isReady = signals.gowmReady || signals.goInitialized ||
+                    signals.functionsAvailable || signals.moduleReady ||
+                    signals.metadataReady;
 
                 if (isReady) {
                     finish();
@@ -870,7 +870,7 @@ class UnifiedWasmLoader {
                     setTimeout(checkReady, interval);
                 }
             };
-            
+
             // Start polling quickly in case callback is not used
             setTimeout(checkReady, 10);
         });
@@ -884,7 +884,7 @@ class UnifiedWasmLoader {
      */
     async loadGoRuntime(customPath, goVersion, moduleId) {
         await this.ensureNodeModules();
-        
+
         //  If goVersion is specified, download the corresponding runtime
         if (goVersion && !customPath) {
             try {
@@ -893,7 +893,7 @@ class UnifiedWasmLoader {
                 console.warn(`Failed to download Go runtime for ${goVersion}, using default: ${error.message}`);
             }
         }
-        
+
         //  Auto-detect goVersion from module.json metadata
         if (!goVersion && !customPath && moduleId) {
             const metadata = this._metadataCache.get(moduleId);
@@ -905,7 +905,7 @@ class UnifiedWasmLoader {
                 }
             }
         }
-        
+
         const runtimePath = customPath || this.getDefaultRuntimePath();
 
         if (this.isNode) {
@@ -933,7 +933,7 @@ class UnifiedWasmLoader {
     async _downloadGoRuntime(goVersion) {
         // Ensure Node modules are loaded
         await this.ensureNodeModules();
-        
+
         // Check cache first
         const cacheKey = `go_runtime_${goVersion}`;
         if (this._runtimeCache.has(cacheKey)) {
@@ -942,23 +942,23 @@ class UnifiedWasmLoader {
 
         // Download from GitHub
         const url = `https://raw.githubusercontent.com/golang/go/${goVersion}/misc/wasm/wasm_exec.js`;
-        
+
         try {
             await this.ensureFetch();
             const response = await this.fetchWithRetry(url, {});
-            
+
             if (!response.ok) {
                 throw new Error(`Failed to download runtime: ${response.status} ${response.statusText}`);
             }
-            
+
             const runtimeCode = await response.text();
-            
+
             if (this.isNode) {
                 // Save to temporary file in Node.js
                 const os = this.os || this.dynamicRequire('os');
                 const tempDir = os.tmpdir();
                 const tempPath = this.path.join(tempDir, `gowm_runtime_${goVersion}.js`);
-                
+
                 this.fs.writeFileSync(tempPath, runtimeCode, 'utf8');
                 this._runtimeCache.set(cacheKey, tempPath);
                 return tempPath;
@@ -996,7 +996,7 @@ class UnifiedWasmLoader {
                 reject(new Error('Cannot load script in non-browser environment'));
                 return;
             }
-            
+
             const script = document.createElement('script');
             script.src = src;
             script.onload = resolve;
@@ -1040,7 +1040,7 @@ class UnifiedWasmLoader {
                 if (dir && dir !== '.' && dir !== '..') return dir;
             }
         }
-        
+
         return basename || 'default';
     }
 
@@ -1056,12 +1056,12 @@ class UnifiedWasmLoader {
         if (source.startsWith('http://') || source.startsWith('https://')) {
             return false;
         }
-        return source.startsWith('./') || 
-               source.startsWith('../') || 
-               source.startsWith('/') || 
-               source.startsWith('~') || 
-               source.includes('\\') || 
-               source.endsWith('.wasm');
+        return source.startsWith('./') ||
+            source.startsWith('../') ||
+            source.startsWith('/') ||
+            source.startsWith('~') ||
+            source.includes('\\') ||
+            source.endsWith('.wasm');
     }
 
     /**
@@ -1077,11 +1077,11 @@ class UnifiedWasmLoader {
         if (source.startsWith('./') || source.startsWith('../') || source.startsWith('/')) return false;
         if (source.startsWith('http://') || source.startsWith('https://')) return false;
         const parts = source.split('/');
-        return parts.length === 2 && 
-               parts[0].length > 0 && 
-               parts[1].length > 0 && 
-               /^[a-zA-Z0-9_.-]+$/.test(parts[0]) && 
-               /^[a-zA-Z0-9_.-]+$/.test(parts[1]);
+        return parts.length === 2 &&
+            parts[0].length > 0 &&
+            parts[1].length > 0 &&
+            /^[a-zA-Z0-9_.-]+$/.test(parts[0]) &&
+            /^[a-zA-Z0-9_.-]+$/.test(parts[1]);
     }
 
     /**
@@ -1244,10 +1244,10 @@ class UnifiedWasmLoader {
             }
 
             // instantiateStreaming requires correct MIME type (application/wasm)
-            const contentType = response.headers && response.headers.get 
-                ? response.headers.get('content-type') 
+            const contentType = response.headers && response.headers.get
+                ? response.headers.get('content-type')
                 : '';
-            
+
             if (contentType && contentType.includes('application/wasm')) {
                 return WebAssembly.instantiateStreaming(response, importObject);
             }
@@ -1300,8 +1300,8 @@ class UnifiedWasmLoader {
         for (const { ext, encoding } of variants) {
             try {
                 const compressedUrl = url + ext;
-                const response = await this.fetchWithRetry(compressedUrl, { 
-                    ...options, 
+                const response = await this.fetchWithRetry(compressedUrl, {
+                    ...options,
                     retries: 0 // Don't retry compressed variant checks
                 });
                 if (response.ok) {
@@ -1367,7 +1367,7 @@ class UnifiedWasmLoader {
                 const ds = new DecompressionStream(encoding === 'gzip' ? 'gzip' : 'deflate');
                 const writer = ds.writable.getWriter();
                 const reader = ds.readable.getReader();
-                
+
                 writer.write(bytes);
                 writer.close();
 
@@ -1430,7 +1430,7 @@ class UnifiedWasmLoader {
         const path = options.path || '';
         const filename = options.filename || '';
         const uniqueSource = `${source}|${path}|${filename}`;
-        
+
         if (this.isNode && this.crypto) {
             return this.crypto.createHash('sha256').update(uniqueSource).digest('hex');
         }
@@ -1522,7 +1522,7 @@ class UnifiedWasmLoader {
             try {
                 const cacheDir = this.path.join(this.os.homedir(), '.cache', 'gowm');
                 const cachePath = this.path.join(cacheDir, `${cacheKey}.wasm`);
-                
+
                 if (!this.fs.existsSync(cachePath)) return null;
 
                 const stat = this.fs.statSync(cachePath);

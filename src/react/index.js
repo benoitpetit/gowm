@@ -49,19 +49,22 @@ function useWasm(source, options = {}) {
     const [error, setError] = useState(null);
     const gowmRef = useRef(null);
     const mountedRef = useRef(true);
+    const loadGenRef = useRef(0);
 
     // Serialize options for dependency tracking (stable reference)
     const optionsKey = JSON.stringify(options);
 
     const reload = useCallback(() => {
         if (!source) return;
+        loadGenRef.current += 1;
+        const gen = loadGenRef.current;
         setLoading(true);
         setError(null);
         setBridge(null);
-        loadModule();
+        loadModule(gen);
     }, [source, optionsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    async function loadModule() {
+    async function loadModule(gen) {
         try {
             if (!gowmRef.current) {
                 const GoWM = require('../core/gowm');
@@ -71,12 +74,12 @@ function useWasm(source, options = {}) {
             const parsedOptions = JSON.parse(optionsKey);
             const result = await gowmRef.current.load(source, parsedOptions);
 
-            if (mountedRef.current) {
+            if (mountedRef.current && gen === loadGenRef.current) {
                 setBridge(result);
                 setLoading(false);
             }
         } catch (err) {
-            if (mountedRef.current) {
+            if (mountedRef.current && gen === loadGenRef.current) {
                 setError(err);
                 setLoading(false);
             }
@@ -86,10 +89,12 @@ function useWasm(source, options = {}) {
     useEffect(() => {
         mountedRef.current = true;
         if (source) {
+            loadGenRef.current += 1;
+            const gen = loadGenRef.current;
             setLoading(true);
             setError(null);
             setBridge(null);
-            loadModule();
+            loadModule(gen);
         }
         return () => {
             mountedRef.current = false;
@@ -125,19 +130,22 @@ function useWasmFromGitHub(repo, options = {}) {
     const [metadata, setMetadata] = useState(null);
     const gowmRef = useRef(null);
     const mountedRef = useRef(true);
+    const loadGenRef = useRef(0);
 
     const optionsKey = JSON.stringify(options);
 
     const reload = useCallback(() => {
         if (!repo) return;
+        loadGenRef.current += 1;
+        const gen = loadGenRef.current;
         setLoading(true);
         setError(null);
         setBridge(null);
         setMetadata(null);
-        loadModule();
+        loadModule(gen);
     }, [repo, optionsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    async function loadModule() {
+    async function loadModule(gen) {
         try {
             if (!gowmRef.current) {
                 const GoWM = require('../core/gowm');
@@ -147,13 +155,13 @@ function useWasmFromGitHub(repo, options = {}) {
             const parsedOptions = JSON.parse(optionsKey);
             const result = await gowmRef.current.loadFromGitHub(repo, parsedOptions);
 
-            if (mountedRef.current) {
+            if (mountedRef.current && gen === loadGenRef.current) {
                 setBridge(result);
                 setMetadata(result.getMetadata ? result.getMetadata() : null);
                 setLoading(false);
             }
         } catch (err) {
-            if (mountedRef.current) {
+            if (mountedRef.current && gen === loadGenRef.current) {
                 setError(err);
                 setLoading(false);
             }
@@ -163,11 +171,13 @@ function useWasmFromGitHub(repo, options = {}) {
     useEffect(() => {
         mountedRef.current = true;
         if (repo) {
+            loadGenRef.current += 1;
+            const gen = loadGenRef.current;
             setLoading(true);
             setError(null);
             setBridge(null);
             setMetadata(null);
-            loadModule();
+            loadModule(gen);
         }
         return () => {
             mountedRef.current = false;
@@ -202,14 +212,15 @@ function useWasmWorker(source, options = {}) {
     const gowmRef = useRef(null);
     const workerRef = useRef(null);
     const mountedRef = useRef(true);
+    const loadGenRef = useRef(0);
 
     const optionsKey = JSON.stringify(options);
 
-    async function loadWorker() {
+    async function loadWorker(gen) {
         try {
             if (!gowmRef.current) {
                 const GoWM = require('../core/gowm');
-                gowmRef.current = new GoWM({ 
+                gowmRef.current = new GoWM({
                     logLevel: options.logLevel || 'silent',
                     enableWorkers: true
                 });
@@ -219,12 +230,12 @@ function useWasmWorker(source, options = {}) {
             const workerModule = await gowmRef.current.loadInWorker(source, parsedOptions);
             workerRef.current = workerModule;
 
-            if (mountedRef.current) {
+            if (mountedRef.current && gen === loadGenRef.current) {
                 setWorker(workerModule);
                 setLoading(false);
             }
         } catch (err) {
-            if (mountedRef.current) {
+            if (mountedRef.current && gen === loadGenRef.current) {
                 setError(err);
                 setLoading(false);
             }
@@ -234,10 +245,12 @@ function useWasmWorker(source, options = {}) {
     useEffect(() => {
         mountedRef.current = true;
         if (source) {
+            loadGenRef.current += 1;
+            const gen = loadGenRef.current;
             setLoading(true);
             setError(null);
             setWorker(null);
-            loadWorker();
+            loadWorker(gen);
         }
         return () => {
             mountedRef.current = false;
@@ -262,7 +275,7 @@ function useWasmWorker(source, options = {}) {
         }
     }, [worker]);
 
-    return { worker, loading, error, call, terminate, ready: !loading && !error && worker !== null };
+    return { worker, loading, error, call, terminate, ready: !loading && !error && worker !== null, inWorker: true };
 }
 
 /**
@@ -365,7 +378,7 @@ function useSharedBuffer(bufferSize = 1024 * 1024) {
 function useWasmWorkerWithSharedMemory(source, options = {}) {
     ensureReact();
     const { useCallback } = React;
-    
+
     const workerHook = useWasmWorker(source, options);
     const sharedBufferHook = useSharedBuffer(options.sharedBufferSize || 1024 * 1024);
 
@@ -395,8 +408,8 @@ function useWasmWorkerWithSharedMemory(source, options = {}) {
     };
 }
 
-module.exports = { 
-    useWasm, 
+module.exports = {
+    useWasm,
     useWasmFromGitHub,
     useWasmWorker,
     useSharedBuffer,

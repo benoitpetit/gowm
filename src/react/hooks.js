@@ -1,4 +1,8 @@
 /**
+ * @deprecated This file is superseded by `src/react/index.js` which exposes the
+ * canonical `useWasm`, `useWasmFromGitHub`, and `useWasmWorker` hooks.
+ * Do not import from this file — use `gowm/react` instead.
+ *
  * React Hooks for GoWM
  *  Web Worker support with useWasmWorker hook
  * 
@@ -30,7 +34,7 @@ export function useWasm(source, options = {}) {
                 }
 
                 const mod = await loaderRef.current.load(source, options);
-                
+
                 if (mounted) {
                     setModule(mod);
                     setLoading(false);
@@ -95,7 +99,7 @@ export function useWasmWorker(source, options = {}) {
 
                 const workerModule = await loaderRef.current.loadInWorker(source, options);
                 workerRef.current = workerModule;
-                
+
                 if (mounted) {
                     setWorker(workerModule);
                     setLoading(false);

@@ -38,20 +38,20 @@ const ErrorCodes = {
     FUNCTION_NOT_FOUND: 'GOWM_ERR_FUNCTION_NOT_FOUND',
     FUNCTION_CALL_FAILED: 'GOWM_ERR_FUNCTION_CALL_FAILED',
     INVALID_ARGUMENTS: 'GOWM_ERR_INVALID_ARGUMENTS',
-    
+
     // Memory errors
     MEMORY_ALLOCATION_FAILED: 'GOWM_ERR_MEMORY_ALLOCATION_FAILED',
     BUFFER_CREATION_FAILED: 'GOWM_ERR_BUFFER_CREATION_FAILED',
     INVALID_BUFFER_SIZE: 'GOWM_ERR_INVALID_BUFFER_SIZE',
-    
+
     // Module errors
     MODULE_NOT_LOADED: 'GOWM_ERR_MODULE_NOT_LOADED',
     MODULE_NOT_READY: 'GOWM_ERR_MODULE_NOT_READY',
-    
+
     // Network errors
     NETWORK_ERROR: 'GOWM_ERR_NETWORK',
     DOWNLOAD_FAILED: 'GOWM_ERR_DOWNLOAD_FAILED',
-    
+
     // Generic error
     UNKNOWN: 'GOWM_ERR_UNKNOWN'
 };
@@ -73,7 +73,7 @@ class UnifiedWasmBridge {
         this._logLevel = options.logLevel || 'info';
         this._debugMode = this._logLevel === 'debug';
         this._logger = options.logger || console;
-        
+
         //  Error codes export
         this.ErrorCodes = ErrorCodes;
     }
@@ -154,7 +154,7 @@ class UnifiedWasmBridge {
                 const result = globalThis[funcName](...args);
                 return this._processResult(funcName, result);
             }
-            
+
             //  Throw standardized error
             throw new GoWMError(
                 `Function ${funcName} not found in module '${this.moduleId}'`,
@@ -166,7 +166,7 @@ class UnifiedWasmBridge {
             if (error instanceof GoWMError) {
                 throw error;
             }
-            
+
             // Wrap other errors in GoWMError
             throw new GoWMError(
                 `Error calling ${funcName}: ${error.message}`,
@@ -194,7 +194,7 @@ class UnifiedWasmBridge {
         if (isVariadic) return;
 
         // Count required parameters (those without optional:true or "optional" in description)
-        const requiredParams = params.filter(p => 
+        const requiredParams = params.filter(p =>
             !p.optional && (!p.description || !p.description.toLowerCase().includes('optional'))
         );
 
@@ -203,9 +203,9 @@ class UnifiedWasmBridge {
                 `${funcName}() expects at least ${requiredParams.length} argument(s) ` +
                 `(${requiredParams.map(p => p.name).join(', ')}), but got ${args.length}`,
                 ErrorCodes.INVALID_ARGUMENTS,
-                { 
-                    funcName, 
-                    expected: requiredParams.length, 
+                {
+                    funcName,
+                    expected: requiredParams.length,
                     actual: args.length,
                     requiredParams: requiredParams.map(p => p.name)
                 }
@@ -311,7 +311,7 @@ class UnifiedWasmBridge {
 
             // Try WASM memory allocation if available
             ptr = this.allocateWasmMemory(size);
-            
+
             if (ptr && this.module.exports && this.module.exports.memory) {
                 // Copy data to WASM memory
                 const wasmBuffer = new Uint8Array(this.module.exports.memory.buffer, ptr, size);
@@ -361,7 +361,7 @@ class UnifiedWasmBridge {
             if (error instanceof GoWMError) {
                 throw error;
             }
-            
+
             throw new GoWMError(
                 `Failed to create buffer: ${error.message}`,
                 ErrorCodes.BUFFER_CREATION_FAILED,
@@ -433,7 +433,8 @@ class UnifiedWasmBridge {
     }
 
     /**
-     * Free allocated memory
+     * Free allocated memory.
+     * Resolution order: WASM exports → bridge-level helpers → globalThis fallback.
      * @param {number} ptr - Memory pointer
      * @param {number} size - Size in bytes
      */
@@ -441,19 +442,29 @@ class UnifiedWasmBridge {
         if (!ptr) return;
 
         try {
-            // Try standard WASM free
+            // 1. Try WASM exports first (direct WebAssembly exports)
+            if (this.module.exports && this.module.exports.free) {
+                this.module.exports.free(ptr);
+                return;
+            }
+
+            if (this.module.exports && this.module.exports.__gowm_free) {
+                this.module.exports.__gowm_free(ptr, size);
+                return;
+            }
+
+            // 2. Try bridge-level function lookup (namespace-aware)
             if (this.hasFunction('free')) {
                 this.call('free', ptr);
                 return;
             }
 
-            // Try custom WASM free
             if (this.hasFunction('__gowm_free')) {
                 this.call('__gowm_free', ptr);
                 return;
             }
 
-            // For Go WASM, the garbage collector handles cleanup
+            // 3. For Go WASM, check globalThis fallback (used by modules registered on global scope)
             if (globalThis.__gowm_free && typeof globalThis.__gowm_free === 'function') {
                 globalThis.__gowm_free(ptr);
                 return;
@@ -475,10 +486,10 @@ class UnifiedWasmBridge {
         }
 
         this.callbacks.set(name, callback);
-        
+
         // Make callback available in module namespace
         globalThis[`__gowm_callback_${this.moduleId}_${name}`] = callback;
-        
+
         // Also available globally for backward compat
         globalThis[`__gowm_callback_${name}`] = callback;
         globalThis[name] = callback;
@@ -616,8 +627,8 @@ class UnifiedWasmBridge {
      */
     hasFunction(funcName) {
         // Check WASM exports
-        if (this.module.exports && 
-            this.module.exports[funcName] && 
+        if (this.module.exports &&
+            this.module.exports[funcName] &&
             typeof this.module.exports[funcName] === 'function') {
             return true;
         }
@@ -640,7 +651,7 @@ class UnifiedWasmBridge {
     getSupportedDataTypes() {
         return [
             'Float64Array',
-            'Float32Array', 
+            'Float32Array',
             'Uint8Array',
             'Uint16Array',
             'Uint32Array',
@@ -706,7 +717,7 @@ class UnifiedWasmBridge {
      */
     getStats() {
         const memoryUsage = this.getMemoryUsage();
-        
+
         return {
             name: this.name,
             ready: this.module.ready,
@@ -777,7 +788,7 @@ class UnifiedWasmBridge {
             throw new GoWMError(
                 'SharedArrayBuffer is not supported in this environment',
                 ErrorCodes.BUFFER_CREATION_FAILED,
-                { 
+                {
                     reason: 'SharedArrayBuffer not available',
                     help: 'Enable Cross-Origin-Opener-Policy and Cross-Origin-Embedder-Policy headers'
                 }
@@ -801,7 +812,7 @@ class UnifiedWasmBridge {
                 view: view,
                 size: size,
                 isShared: true,
-                
+
                 // Utility methods
                 write: (data, offset = 0) => {
                     const dataArray = new Uint8Array(data);
@@ -815,7 +826,7 @@ class UnifiedWasmBridge {
                     view.set(dataArray, offset);
                     return offset + dataArray.length;
                 },
-                
+
                 read: (length, offset = 0) => {
                     if (offset + length > size) {
                         throw new GoWMError(
@@ -826,11 +837,11 @@ class UnifiedWasmBridge {
                     }
                     return view.slice(offset, offset + length);
                 },
-                
+
                 clear: () => {
                     view.fill(0);
                 },
-                
+
                 // No free() needed for SharedArrayBuffer (GC managed)
                 free: () => {
                     // SharedArrayBuffer is GC managed, nothing to free
@@ -843,29 +854,13 @@ class UnifiedWasmBridge {
             if (error instanceof GoWMError) {
                 throw error;
             }
-            
+
             throw new GoWMError(
                 `Failed to create shared buffer: ${error.message}`,
                 ErrorCodes.BUFFER_CREATION_FAILED,
                 { originalError: error, size }
             );
         }
-    }
-
-    /**
-     * Free a buffer from memory
-     * @param {number} ptr - Pointer to free
-     * @param {number} length - Length of buffer
-     */
-    freeBuffer(ptr, length) {
-        // In WebAssembly, we typically don't have a direct free() equivalent
-        // unless the module exports one. This is a placeholder for custom allocators.
-        if (this.module.exports && this.module.exports.free) {
-            this.module.exports.free(ptr);
-        } else if (this.module.exports && this.module.exports.__gowm_free) {
-            this.module.exports.__gowm_free(ptr, length);
-        }
-        // If no free method available, memory will be freed when module is unloaded
     }
 
     /**
@@ -911,7 +906,7 @@ class UnifiedWasmBridge {
             // Allocate WASM memory if needed
             let ptr = null;
             const memory = this.module.exports?.memory || this.module.instance?.exports?.memory;
-            
+
             if (memory) {
                 ptr = this.allocateWasmMemory(mapLength);
                 if (ptr) {
@@ -919,7 +914,7 @@ class UnifiedWasmBridge {
                     wasmBuffer.set(view);
                 }
             }
-            
+
             // Fallback to Go memory allocation if WASM memory allocation failed
             if (!ptr && this.module.go && this.module.go.mem) {
                 ptr = this.allocateGoMemory(mapLength);
@@ -936,7 +931,7 @@ class UnifiedWasmBridge {
                 sharedBuffer: sharedBuffer,
                 offset: offset,
                 isShared: true,
-                
+
                 // Sync back to shared buffer (copy from WASM to SharedArrayBuffer)
                 sync: () => {
                     if (ptr) {
@@ -954,7 +949,7 @@ class UnifiedWasmBridge {
                         }
                     }
                 },
-                
+
                 freed: false,
                 free: () => {
                     if (!bufferInfo.freed && ptr) {
@@ -972,7 +967,7 @@ class UnifiedWasmBridge {
             if (error instanceof GoWMError) {
                 throw error;
             }
-            
+
             throw new GoWMError(
                 `Failed to map shared buffer: ${error.message}`,
                 ErrorCodes.BUFFER_CREATION_FAILED,

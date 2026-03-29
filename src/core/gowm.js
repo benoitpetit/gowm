@@ -58,10 +58,10 @@ class GoWM {
             const startTime = Date.now();
 
             const module = await this.loader.loadModule(source, { ...options, name: moduleId });
-            const bridge = new UnifiedWasmBridge(module, { 
-                ...options, 
+            const bridge = new UnifiedWasmBridge(module, {
+                ...options,
                 name: moduleId,
-                logLevel: this.logLevel 
+                logLevel: this.logLevel
             });
 
             this.modules.set(moduleId, { module, bridge, source });
@@ -324,7 +324,7 @@ class GoWM {
         } catch (e) {
             // Fallback for browser or if package.json is not available
         }
-        return '1.1.6';
+        return '1.1.9';
     }
 
     /**

@@ -81,7 +81,7 @@
         describeFunction: gowm.describeFunction.bind(gowm),
 
         // Version info (read from package.json if available)
-        version: (typeof require !== 'undefined' && require('../package.json').version) || '1.1.6',
+        version: (typeof require !== 'undefined' && require('../package.json').version) || '1.1.9',
 
         // Create new instance
         create: (options) => new GoWM(options)
