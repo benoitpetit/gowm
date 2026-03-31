@@ -324,7 +324,7 @@ class GoWM {
         } catch (e) {
             // Fallback for browser or if package.json is not available
         }
-        return '1.1.9';
+        return '1.2.0';
     }
 
     /**

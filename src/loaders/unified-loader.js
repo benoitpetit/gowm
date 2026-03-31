@@ -394,6 +394,12 @@ class UnifiedWasmLoader {
         if (this.isLocalPath(source)) {
             if (this.isNode) {
                 bytes = await this.loadFromFile(source);
+                // Load local metadata if available
+                const metadata = await this._loadLocalMetadata(source);
+                if (metadata) {
+                    const moduleId = options.name || this.extractModuleId(source);
+                    this._metadataCache.set(moduleId, metadata);
+                }
             } else {
                 // In browser, local-looking relative paths are treated as relative URLs
                 bytes = await this.loadFromHttp(source, options);
@@ -410,6 +416,12 @@ class UnifiedWasmLoader {
         // 4. Fallback: try as file in Node.js, or as relative URL in browser
         else if (this.isNode) {
             bytes = await this.loadFromFile(source);
+            // Load local metadata if available
+            const metadata = await this._loadLocalMetadata(source);
+            if (metadata) {
+                const moduleId = options.name || this.extractModuleId(source);
+                this._metadataCache.set(moduleId, metadata);
+            }
         } else {
             bytes = await this.loadFromHttp(source, options);
         }
@@ -439,6 +451,40 @@ class UnifiedWasmLoader {
 
         const buffer = this.fs.readFileSync(filePath);
         return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+    }
+
+    /**
+     * Load module.json metadata from local file system
+     * @param {string} wasmFilePath - Path to WASM file
+     * @returns {Promise<object|null>} Parsed module.json or null
+     */
+    async _loadLocalMetadata(wasmFilePath) {
+        if (!this.fs || !this.path) {
+            return null;
+        }
+
+        try {
+            const dir = this.path.dirname(wasmFilePath);
+            const metadataPath = this.path.join(dir, 'module.json');
+
+            if (!this.fs.existsSync(metadataPath)) {
+                return null;
+            }
+
+            const content = this.fs.readFileSync(metadataPath, 'utf-8');
+            const metadata = JSON.parse(content);
+
+            // Validate minimal required fields
+            if (!metadata.name || !metadata.version) {
+                console.warn('module.json missing required fields: name, version');
+                return null;
+            }
+
+            return metadata;
+        } catch (error) {
+            // Silently fail - module.json is optional
+            return null;
+        }
     }
 
     /**
